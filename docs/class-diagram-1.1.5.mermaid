@@ -1,0 +1,99 @@
+classDiagram
+    class GblMotion {
+        +Duration REVEAL
+        +Interpolator EASE
+        +double POPUP_OFFSET
+        +boolean allowed(Scene scene)$
+        +boolean isDarkActive()$
+        +void wireComboBox(ComboBox box, BooleanSupplier dark)$
+        +void animatePopupIn(Window popup)$
+        +void resetPopup(Window popup)$
+        +void paintPopups(boolean dark)$
+        +void stripPopupStyles()$
+    }
+    class GblTitledPaneSkin {
+        -DoubleProperty transition
+        -Timeline timeline
+        -HBox title
+        -Label titleText
+        -SVGPath arrow
+        -StackPane content
+        -Rectangle clip
+        +GblTitledPaneSkin(TitledPane control)
+        +void runTransition(double target)
+        +void setTransition(double t)
+        +boolean motionAllowed()
+        +void dispose()
+    }
+    class MultiplayerPage {
+        -AtomicReference pendingState
+        -AtomicBoolean stateFlushScheduled
+        -String lastUiSignature
+        -TitledPane logPane
+        -ComboBox nodeMode
+        +ScrollPane getView()
+        +void onShown()
+        +void onHidden()
+        -void onRemoteState(StateSnapshot s)
+        -void flushPendingState()
+        -void applyState(StateSnapshot s)
+        -void refreshProbe()
+        -void applyProbe(ProbeReport r, Throwable e)
+        -Node buildLogCard()
+    }
+    class RoomService {
+        -int POLL_MS
+        -int IDLE_HEARTBEAT_MS
+        -AtomicBoolean fetching
+        -ScheduledExecutorService poller
+        +void subscribe(RoomStateListener l)
+        +void unsubscribe(RoomStateListener l)
+        +StateSnapshot currentState()$
+        +String fetchLogs()
+        -void pollTick()
+        -void notifyListeners(StateSnapshot s)
+    }
+    class NetworkProbe {
+        -AtomicBoolean inFlight
+        -AtomicLong generation
+        -ProbeReport cached
+        +void probeAsync(Callback cb)
+        -void runProbe(Callback cb)
+        +boolean isRelayed(StateSnapshot s)$
+    }
+    class ShellView {
+        -boolean themeDark
+        -Timeline pageFade
+        -Node fadeCacheOwner
+        -void wireDarkPopup(ComboBox box)
+        -void paintPopupDark()
+        -void stripPopupDark()
+        -void fadeIn(Node page)
+        -void applyTheme()
+    }
+    class SettingsStore {
+        +boolean reduceMotion()$
+        +ThemeMode theme()$
+    }
+    class TitledPane {
+        +BooleanProperty expanded
+        +BooleanProperty animated
+    }
+    class ComboBox {
+        +ObjectProperty onShown
+    }
+    class SkinBase~TitledPane~
+
+    GblTitledPaneSkin --|> SkinBase~TitledPane~
+    GblTitledPaneSkin --> TitledPane : skinnable
+    GblTitledPaneSkin ..> GblMotion : duration / reduceMotion
+    MultiplayerPage --> TitledPane : installs GblTitledPaneSkin
+    MultiplayerPage --> GblMotion : wires nodeMode
+    MultiplayerPage ..> RoomService : subscribe / currentState / fetchLogs
+    MultiplayerPage ..> NetworkProbe : probeAsync
+    ShellView ..> GblMotion : delegate popup wiring
+    ShellView --> ComboBox : 13 instances
+    RoomService ..> MultiplayerPage : onState callback
+    NetworkProbe ..> MultiplayerPage : onResult callback
+    GblMotion ..> SettingsStore : reduceMotion / theme
+    GblMotion ..> ComboBox : onShown / onHidden popup root
