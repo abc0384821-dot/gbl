@@ -1,0 +1,100 @@
+{
+  "release": "1.2.1",
+  "baseline": "1.2",
+  "channels": ["gitee", "github", "website(cloudflare)"],
+  "releasePolicy": "each channel creates a NEW v1.2.1 release; never append to old v1.2 releases",
+  "tasks": [
+    {
+      "id": "T01",
+      "name": "发布管线 & 版本基线",
+      "priority": "P0",
+      "required": true,
+      "dependsOn": [],
+      "files": [
+        "src/main/java/com/mclauncher/LauncherApp.java",
+        "tools/build_1.2.1.py",
+        "tools/pack_1.2.1.py",
+        "tools/preflight_1.2.1.py",
+        "tools/check_1.2.1_logic.py",
+        "tools/publish_1.2.1.py",
+        "tools/publish_github_1.2.1.py",
+        "tools/push_site_1.2.1.py",
+        "tools/verify_live_1.2.1.py"
+      ],
+      "what": "LauncherApp VERSION/BUILD -> 1.2.1 + 新增 FP_1_2_1 指纹(static 打印进常量池)。从 1.2 派生 8 个 1.2.1 门禁脚本：build 期望 1.2.1、CHECKS 追加 FP_1_2_1 并逐字保留历代指纹；pack OLD_LINK_RE 覆盖到 1.2、NEW_LINK=v1.2.1/1.2.1-portable.zip、version.json 主字段指 update 包/full* 指 portable 包、LIMIT 维持 98MB；preflight/check R 字典加 1.2.1 段接 group_a/group_b rels 并集 + items() 逐条循环 2 处；verify_live FORBID 放 1.2 旧值、EXPECT 与官网四页逐字一致；官网四页 + version.json 纯 CRLF。三渠道各自新建 v1.2.1 release，旧 v1.2 资产原封保留。"
+    },
+    {
+      "id": "T02",
+      "name": "引擎内置：vendor + TraversalProvider + build/pack 接线",
+      "priority": "P0",
+      "required": true,
+      "dependsOn": ["T01"],
+      "files": [
+        "vendor/engines/terracotta/terracotta-0.4.2-windows-x86_64.exe",
+        "vendor/engines/terracotta/VCRUNTIME140.DLL",
+        "vendor/engines/terracotta/port.txt",
+        "vendor/engines/terracotta/.complete",
+        "src/main/java/com/mclauncher/multiplayer/TraversalProvider.java",
+        "tools/build_1.2.1.py",
+        "tools/pack_1.2.1.py"
+      ],
+      "what": "落地 vendor 引擎二进制(exe sha256 74c10568...9796 / DLL sha256 475ab98b...f0d1，逐字节固定)。TraversalProvider 新增 appRoot() + BUILTIN_ENGINE_DIR(GBL/engines/terracotta/)；resolveInstalledDir() 三层：内置 -> ~/.gbl -> 联网兜底(主Gitee/备CNB,坏包保留,零删除)；内置目录只读零写入(预建 port.txt/.complete)。build_1.2.1 deploy 末尾把 vendor 引擎拷进 dist/GBL/engines/terracotta/ 并 SHA256 双文件硬校验；pack_1.2.1 完整包断言 4 文件在包内且哈希命中、更新包保持 3 件无 .exe/.dll、LIMIT=98MB。"
+    },
+    {
+      "id": "T03",
+      "name": "联机页 UI 重构：三段式大厅 + 按钮绑事件 + 客人模态 + 删 missingBar",
+      "priority": "P0",
+      "required": true,
+      "dependsOn": ["T01"],
+      "files": [
+        "src/main/java/com/mclauncher/ui/MultiplayerPage.java",
+        "src/main/resources/com/mclauncher/theme.css"
+      ],
+      "what": "buildHallCard() 重构为 idle(玩家一行+两个btn-download绿按钮)/busy(8px引擎条+小字状态+取消,紧凑)/done(invite+actionRow+lanBar) 三段互斥 + 常驻 license；删大字引擎条、三段 desc、两大宽行、页内 joinCard、missingBar。actionRow 8 按钮全部 setOnAction(create/join/copy/close/exit/reset/cancel/retry)；新增 doCancel() 走 RoomService.resetIdleAsync 真中断回待机。新增 showInviteModal() 居中模态(标题请输入房主提供的邀请码+输入框+必填/格式红字+[确定][取消]仿 showGameModal 走 modalLayer+.card.mp-modal-card)，startGuestFlow 改走模态、取消真关。applyState/applyButtons 按状态组切三段；updateEngineBar 去 missing 形参。theme.css 只加 .gbl-compact 下 mp-idle-box/mp-busy-line/mp-invite-modal，删 .mp-missing。FX 线程铁律：改 getChildren() 一律 runFx；看门狗判真实界面态不信任布尔位。"
+    },
+    {
+      "id": "T04",
+      "name": "冗余清理 & 样式收口",
+      "priority": "P1",
+      "required": false,
+      "dependsOn": ["T03"],
+      "files": [
+        "src/main/java/com/mclauncher/ui/MultiplayerPage.java",
+        "src/main/resources/com/mclauncher/theme.css"
+      ],
+      "what": "删死方法(buildProbeSection/probeRow/buildConfigSection/buildLogCard/buildJoinArea/buildMissingBar/bigRow)与孤立字段(probe*/nodeMode/customNodesField/logArea/logPane/joinCard/joinArea/codeField/codeError/avatar*/identity*/relayWarn/ARROW/Icons)；refreshIdentity 收敛为只喂 playerLine；theme.css 清理 mp-* 死样式。保留 lanBar/relay 功能性。P0 紧可后置，不影响功能。"
+    },
+    {
+      "id": "T05",
+      "name": "门禁探针 & QA 接线",
+      "priority": "P0",
+      "required": true,
+      "dependsOn": ["T01", "T02", "T03"],
+      "files": [
+        "tools/check_1.2.1_logic.py",
+        "tools/preflight_1.2.1.py",
+        "docs/GBL_121_UI_ENGINE_SPEC.md"
+      ],
+      "what": "buggy 反向探针(旧逻辑只看 currentProcess 被抓 FAIL / 取消不中断反向鉴别 / 内置缺失联网兜底路径鉴别)；静态审计 actionRow 8 按钮 onAction 全非 null、showInviteModal 取消路径确实 setShown(modalLayer,false)+clear。跑全链 build->pack->preflight->publish(gitee/github)->push_site->verify_live --strict-web，记录完整包实测体积(QA-4)。"
+    }
+  ],
+  "requiredTasks": ["T01", "T02", "T03", "T05"],
+  "optionalTasks": ["T04"],
+  "qaCheckpoints": [
+    "取消真中断：建房/加入进行中点取消 -> 回 WAITING、引擎 /state=waiting、进程仍存活可复用；反向鉴别旧代码必被抓",
+    "客人模态取消能关：空输入红字停留、非法码格式红字、取消真关 modalLayer",
+    "引擎内置冷启动离线：干净环境(无 ~/.gbl、断网)跑完整包无需联网即起引擎 /meta 200，命中内置目录",
+    "包体积：portable <=98MB(预期92~93MB)、update 恰 3 条无 .exe/.dll、Gitee 附件 <100MB，记录真实字节",
+    "FX 线程：运行时探针三段 show/hide + modal setAll/clear + toast 无 CME，worker 不改 JavaFX 树",
+    "按钮全绑：actionRow 8 按钮 onAction 全非 null",
+    "门禁指纹：全链 --strict-web 全绿、FP_1_2_1 可扫、历代指纹保留、buggy 反向有效",
+    "换行渠道：MultiplayerPage 纯 LF、theme.css/官网四页纯 CRLF、Gitee/GitHub 各自新建 v1.2.1、下载链无混合坏链",
+    "零删除：唯一时间戳目录、.minecraft/GBL/jre 未触碰、引擎坏包保留不删"
+  ],
+  "risks": [
+    "98MB 门禁：完整包 87.6MB+引擎压缩≈92~93MB<98MB；万一>98MB 则 LIMIT 精确抬到 min(实测,99MB) 且不破 Gitee 100MB，不放弃内置",
+    "更新包明确不带引擎(结构不允许 .exe/.dll)，更新用户走 ~/.gbl 或联网兜底，无回归",
+    "内置目录只读：预建占位、运行时零写入，ensureInstalled 仅第 3 层且只写 ~/.gbl",
+    "更新用户无引擎且断网=已知边缘(1.2 同款行为)，联网即自愈，不扩大范围"
+  ]
+}
