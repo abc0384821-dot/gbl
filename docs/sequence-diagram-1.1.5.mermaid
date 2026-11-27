@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant SH as ShellView
+    participant MP as MultiplayerPage
+    participant GM as GblMotion
+    participant SK as GblTitledPaneSkin
+    participant RS as RoomService
+    participant NP as NetworkProbe
+
+    Note over U,SH: 流程一：首次切到「多人联机」页
+    U->>SH: 点击左侧导航
+    SH->>MP: onShown()
+    MP->>RS: subscribe(roomListener)
+    MP->>RS: currentState()
+    RS-->>MP: StateSnapshot
+    MP->>MP: onRemoteState → pendingState + 合并入队
+    MP->>NP: probeAsync(callback)（后台线程）
+    SH->>SH: fadeIn(page)，联机页跳过临时 cache
+    NP-->>MP: ProbeReport（后台线程）
+    MP->>MP: runFx → applyProbe → mark() 收敛为圆点 + 文案
+
+    Note over U,RS: 流程二：500ms 轮询 → 幂等刷新
+    loop 每 500ms（无人订阅时降为 2s 心跳）
+        RS->>RS: pollTick() GET /state（后台线程）
+        alt index 增长 或 state 变化
+            RS->>MP: onState(snap)
+            MP->>MP: pendingState.set(snap)，最多排一个 runFx
+            MP->>MP: flushPendingState → 签名比对
+            alt 签名未变
+                MP->>MP: 直接 return，一个 UI 属性都不碰
+            else 签名变了
+                MP->>MP: setTextIfChanged / setShownIfChanged / chip 幂等
+            end
+        else 无变化
+            RS->>RS: 丢弃，不打扰 UI
+        end
+    end
+
+    Note over U,SK: 流程三：展开「日志与诊断」
+    U->>SK: 点击标题条 / 点「查看日志」
+    SK->>GM: allowed(scene) 且 isAnimated()
+    alt 允许动画
+        SK->>SK: stop 旧 timeline，从当前 transition 起播
+        SK->>SK: 150ms EASE_BOTH 改 transition → clip 高度 + 箭头旋转
+        SK->>RS: fetchLogs()（单飞，后台线程）
+        RS-->>SK: 日志文本
+        SK->>MP: runFx → logArea.setText（三段式失败文案）
+    else reduceMotion
+        SK->>SK: 直接落终态，无 Timeline
+    end
+
+    Note over U,GM: 流程四：ComboBox 下拉展开
+    U->>SH: 点击任一 ComboBox（14 个之一）
+    SH->>GM: wireComboBox 的 onShown 回调
+    GM->>GM: paintPopups(dark) 挂 theme.css / popup-dark.css
+    GM->>GM: animatePopupIn(popupRoot) 150ms 淡入 + translateY -6→0
+    U->>SH: 选中一项 → onHidden
+    GM->>GM: resetPopup 复位 opacity / translateY（出场保持原生）
