@@ -1,0 +1,239 @@
+classDiagram
+    direction TB
+
+    class ContentKind {
+        <<enumeration>>
+        MOD
+        MODPACK
+        RESOURCEPACK
+        SHADER
+        WORLD
+        +String modrinthType
+        +int cfClassId
+        +String dirName
+        +String aliasTableKey
+        +String label
+        +String sourceLabel
+        +boolean hasEnableToggle
+        +static ContentKind fromTabIndex(int index)
+        +static ContentKind fromDepKey(String key)
+    }
+    class ContentSource {
+        <<enumeration>>
+        MODRINTH
+        CURSEFORGE
+        LOCAL
+    }
+    class DependencyKind {
+        <<enumeration>>
+        REQUIRED
+        EMBEDDED
+        OPTIONAL
+        INCOMPATIBLE
+        +String label
+        +boolean installable
+        +boolean needsConfirmIfInstalled
+        +static DependencyKind fromModrinth(String type)
+        +static DependencyKind fromCurseForge(int relationType)
+    }
+
+    class ModrinthClient {
+        <<service>>
+        +String API$
+        +record Hit(...)$
+        +record File(url, filename, sha1, size, primary)$
+        +record Dependency(projectId, versionId, fileName, type)$
+        +record Project(..., List~Dependency~ dependencies)$
+        +record Version(..., List~Dependency~ dependencies)$
+        +record ProjectBrief(title, iconUrl)$
+        +List~Hit~ search(String q, String mc, LoaderType l, int limit, String sort, List~String~ cats, String projectType)$
+        +Project project(String projectId)$
+        +Map~String,ProjectBrief~ projects(List~String~ ids)$
+        +List~Version~ allVersions(String projectId)$
+        +Path install(File f, String versionId, AtomicBoolean c, ProgressListener l)$
+        +Path install(File f, String versionId, List~Dependency~ deps, AtomicBoolean c, ProgressListener l)$
+    }
+    note for ModrinthClient "v1.1 E1/E2 实证: GET /v2/project 38字段 无 dependencies, Project.dependencies() 恒空占位; 唯一来源 = version.dependencies[] (project_id / version_id / file_name / dependency_type); project_id 恒非空, version_id 90.6% null, file_name 100% null; 展示只能靠 project_id + GET /v2/projects?ids 批量反查并按 id 建 Map (返回顺序不保证); 四枚举全覆盖 required/optional/embedded/incompatible"
+    class CurseForgeClient {
+        <<service>>
+        +String API$
+        +int CLASS_ID_MODS$
+        +int CLASS_ID_MODPACKS$
+        +int CLASS_ID_RESOURCE_PACKS$
+        +int CLASS_ID_SHADERS$
+        +int CLASS_ID_WORLDS$
+        +List~Hit~ search(String q, String mc, String sort, List~Long~ cats, int limit)$
+        +List~Hit~ search(String q, String mc, String sort, List~Long~ cats, int limit, int classId)$
+        +List~File~ files(long modId)$
+        +String downloadUrl(long modId, long fileId)$
+        +Path install(long modId, File f, String versionId, AtomicBoolean c)$
+    }
+    note for CurseForgeClient "v1.1 E3 实证 /v1/categories?gameId=432: 顶级类 6=Mods / 4471=Modpacks / 12=Resource Packs / 17=Worlds / 6552=Shaders / 6945=Data Packs / 4559=Addons / 5=Bukkit Plugins / 4546=Customization; 坑: 顶级类自身 classId=null (id 才是被引用值); Addons(4559) 下有同名 Worlds(4560)/Resource Packs(4561) 勿误用. E4: data[].dependencies[] 只有 modId+relationType, 无 fileId (原调研作废); relationType 1/2/3/4 实测, 0/5/6 仅文档值; 名称 POST /v1/mods {modIds} 取 logo.url, 无 iconUrl; P0 不解析依赖(Q8)"
+
+    class ContentStore {
+        <<service>>
+        +Path resourcepacksDir()$
+        +Path shaderpacksDir()$
+        +Path savesDir()$
+        +record ContentItem(path, fileName, displayName, sizeBytes, enabled, source, mcVersion)$
+        +List~ContentItem~ scan(ContentKind kind)$
+        +void setEnabled(Path file, boolean enabled)$
+        +boolean remove(Path path)$
+        +void reveal(Path path)$
+        +Path installPack(ContentKind kind, String url, String fileName, String sha1, String sha512, AtomicBoolean c, Object l, ContentIndex.Entry meta)$
+        +Path installWorld(String url, String worldName, String sha1, AtomicBoolean c, Object l)$
+        +Path importLocal(ContentKind kind, Path src)$
+        -boolean isSafeZipEntry(Path dest, String entryName)$
+    }
+    class ContentIndex {
+        <<service>>
+        +record Entry(kind, source, projectId, versionId, fileName, sha1, installedAt)$
+        +List~Entry~ all()$
+        +void add(Entry e)$
+        +void remove(String fileName)$
+        +Entry indexOf(String fileName)$
+    }
+    class ModIndex {
+        <<service>>
+        +record Entry(projectId, versionId, filename, sha1, installedAt, List~String~ requires)$
+        +List~Entry~ entries(String versionId)$
+        +void add(String versionId, Entry e)$
+        +List~String~ requiresOf(String versionId, String filename)$
+    }
+    class ModValidator {
+        <<service>>
+        +List~String~ validate(String gameId)$
+        +List~String~ requiredOf(List~Dependency~ deps)$
+        +List~String~ requiredOf(Project p)$
+    }
+    class ModAliases {
+        <<service>>
+        -Map~ContentKind,Map~String,String[]~~ TABLES$
+        +List~String~ expand(String raw)$
+        +List~String~ expand(String raw, ContentKind kind)$
+        +String hint(String raw)$
+        +String hint(String raw, ContentKind kind)$
+    }
+
+    class LoaderType {
+        <<enumeration>>
+        FABRIC
+        QUILT
+        LEGACY_FABRIC
+        FORGE
+        NEOFORGE
+        OPTIFINE
+        +boolean isMeta()
+        +boolean isInstaller()
+        +String metaUrl(String mc)
+        +static LoaderType fromDepKey(String key)
+    }
+    class OptiFineVersionProvider {
+        <<interface>>
+        +List~OptiFineVersion~ versions(String mcVersion)
+        +String downloadUrl(OptiFineVersion v)
+        +static OptiFineVersionProvider get()$
+    }
+    class OptiFineVersion {
+        <<record>>
+        +String id
+        +String mcVersion
+        +String type
+        +String patch
+        +String filename
+        +String forge
+        +String displayName
+    }
+    class BmclApiOptiFineVersions {
+        <<service>>
+        +List~OptiFineVersion~ versions(String mcVersion)
+        +String downloadUrl(OptiFineVersion v)
+    }
+    class EmptyOptiFineVersionProvider {
+        <<service>>
+        +List~OptiFineVersion~ versions(String mcVersion)
+        +String downloadUrl(OptiFineVersion v)
+    }
+    note for OptiFineVersionProvider "v1.1 E8 实证: BMCLAPI GET /optifine/{mc} 200 数组字段 _id/mcversion/type/patch/filename/forge/__v (无 url); downloadUrl 拼 /optifine/{mc}/{type}/{patch} → 206 java-archive (FileFetch 须容忍 206); optifine.net 有 adloadx token 反爬, P0 不作源; 运行时拉取, 绝不打包 jar"
+    class LoaderInstaller {
+        <<service>>
+        +List~LoaderVersion~ versions(LoaderType type, String mcVersion)$
+        +Status status(String versionId)$
+        +String install(String versionId, LoaderType type, String loaderVersion, Listener l)$
+        +void uninstall(String versionId, Listener l)$
+        +String findDerivedProfile(String baseId, LoaderType type)$
+        -Map~String,Object~ merge(...)
+        -void assertCombinationAllowed(String versionId, LoaderType type)$
+        -void backupBaseJar(String versionId)$
+        -Map~String,Object~ writeOptiFineProfile(String baseId, OptiFineVersion v)$
+    }
+    note for LoaderInstaller "v1.5 E9/E10/E12/E13/E14/E22/E23/E24/E25: OptiFine 复用 isInstaller() 骨架, installInstaller() 对 OPTIFINE early return; 【E23】runInstallerJar 里 Forge/NeoForge 的 --installClient 属合法豁免, 只断言 OptiFine 路径不调用; writeOptiFineProfile() 以 VersionJson.raw(mc) 完整父 JSON 深拷贝 + appendTweakClass():1225, 改 id/mainClass=launchwrapper.Launch/jar=null; 【H8·P0阻塞】保留父完整 arguments.jvm+game, 只追加 --tweakClass (resolveInheritance:428 整键子覆盖父 → 照抄增量profile必崩); 【H7·P0阻塞】两条 library 写全 downloads.artifact.{path,url,sha1,size}, path/url 非空 + sha1 由实际字节算出不得空串, 裸 name 必崩; 主库=installer jar 原样复制(c44bd276/7113653), launchwrapper-of 按 launchwrapper-of.txt 动态取版本后从 jar 内嵌条目解包(073b25f1/15930), 【E25】禁止用 1.12 替代; 【E22】两条 url 填哨兵 http://127.0.0.1:1/gbl-no-download/... (非真实可下地址), optifineDownloadUrl() 本体保留供安装期真实下载; 【H9·P0阻塞】写profile前幂等覆盖两个目标path(先删后写), 落盘sha1==profile声明sha1; 【E24】真实url被误请求时7MB只停在 target.part(:404 move不执行, 正式文件不变)但留垃圾且 fetch 仍 Blocked; Mirror.RULES 不认 BMCLAPI 主机 → rewrite 恒等 → 单轮无回落; QA 须断言同级无 *.part; P0 禁止与 Forge/NeoForge 组合; 安装前备份 base jar; 【E21】派生 id.jar 必须复制一份作 GameScanner 已装标记; A方案真机冒烟(T-11门禁, E25 已降级 mainClass 1.13+ 告警: E9 实证即 1.20.1 现代版本); 【E26·v1.6】1.7.10 HD_U/D3 实证无内嵌 launchwrapper-of 条目 → 解不出必须抛可读 IOException + 手动指引, 不生成profile/不落坏版本/不静默改用1.12, 老版完整支持列P1, T-11 须覆盖两个构建类; 回退候选C须验不污染launcher_profiles.json(E17); 【E27·v1.7】sha1/size 由落盘文件动态算, 禁止硬编码1.20.1定值(否则换mc/patch必触发verifyExisting:299判坏); 【E28】内嵌launchwrapper仅新版installer, 1.7.10 HD_U/D3(1193719B/1919条目/零嵌入.jar)为实测反例→E26干净失败; 【E29】MANIFEST无Implementation-Version → staleVersion:154恒false(天然保险,不替代H9); 【E30】1.20.1完整jar本机302后WinError10053未复核, 动态扫zip条目; 【E31·v1.8/#72】placeBytes:663-668 覆盖写前调 cleanPartResidue():671-683 (Files.newDirectoryStream(dir,*.part)) 主动清预置/历史 .part 残留 → OPTIFINE_NO_PART_RESIDUE 由天然不产生升级为主动清除, 边界: 启动期 .part 生命周期仍归 LibFetcher(约束只改2文件); 【E32·v1.8/#72】installOptiFine try/catch 失败时 deleteQuietly(tmpOf) 清 .gbl-tmp 7MB 临时jar, 下载失败/无效jar 同样清, 失败点早于 placeJar/placeBytes/writeOptiFineProfile/复制派生jar 全部落盘 → E26 干净失败细化为 零落盘+零临时残留; 【E33·v1.9/#73】launchwrapper-of 版本随MC分档 2.1(1.14.4)/2.2(1.15.2~1.17.1)/2.3(1.18.1起), 坐标/path/name 三处随 launchwrapper-of.txt 动态生成, extractLaunchwrapper:601 优先txt→versionFromJarName:659 解析jar名→都认不出抛IOException, 绝不兜底2.3; 【E34/H10·v1.9/#70】内嵌库边界 1.13.2→1.14.4(13样本), 候选A仅适用MC≥1.14.4, ≤1.13.2干净失败; 【E37·v1.10】服务层不含MC阈值(动态扫zip), UI禁硬编码mc>=1.14.4, 改=阈值无关中性预提示+服务层toast并存/友好预提示非硬拦截/不改安装逻辑不碰服务层(归T04 ShellView, 尚未落地); 【E40·v1.11】该提示断言拆三层L1Snapshot(两入口不同屏分别验)/L2QA静态/L3服务层; 【E41·v1.12】两入口属H10/E38独立派工可能分批→拆两独立用例/不写死2处/软观测起步(P1不卡P0门禁); 【E42·v1.13】类名锁死单一.optifine-scope-hint/不加后缀(JavaFX精确字符串匹配,带后缀find全匹配不到)+两入口靠切页与独立用例名区分; 类名与无后缀现在定稿/两句确切文案随派工后节点就位消息一次带齐; CASES另起按批次清单/不混入CASES_087/run_selftest.py:147汇总分开; 连骨架都不提前写(report_087_cases:167-187找不到结果行打印假FAIL)/骨架与断言一次落地不留中间态; 【E35·v1.9】判有无内嵌库只能扫zip条目, MANIFEST不具判别力; 【E36·v1.9/#73】CDN偶发截断→isValidJar+最多2次重试; 【E30·v1.9关闭】完整jar复核确切条目名在zip根目录; 【E38·v1.10】Q6第二入口(安装新游戏弹窗)仍暂不支持, 阶段B独立待办; 【E39·v1.10】T-11显式4端点, 1.20.1用独立文件名不得用of_*.jar glob; 【§0.5已通过】#69/#71/#72/#73全部completed, 架构侧只读复核16项全绿; Forge+OptiFine priority 待验证(T-9)"
+    class VersionJson {
+        <<service>>
+        +Map~String,Object~ raw(String id)$
+        +void save(String id, Map~String,Object~ full)$
+    }
+
+    class ShellView {
+        <<view>>
+        -ContentKind modDetailKind
+        -ContentSource modDetailSource
+        -Version modDetailSelectedVersion
+        -Object modDetailSelectedFile
+        -List~String~ DOWNLOAD_TABS$
+        -List~LoaderType~ INSTALL_LOADERS
+        +Node buildModDetailDialog()
+        +void openModDialog(Hit hit)
+        +void openCfDialog(Hit hit)
+        +void openModpackDialog(Hit hit)
+        +void openContentDialog(Object hit, ContentKind kind, ContentSource src)
+        +void populateDeps(List~Dependency~ deps, ContentKind kind, ContentSource src)
+        +void dispatchInstall(Object selected, Button btn)
+        +Node versionRow(Version v, boolean modpack, boolean installed)
+        +Node cfVersionRow(long modId, File f)
+        +Node bodyOfDownloadTab(int index)
+        +Node buildContentTab(int index)
+        +void refreshContentTab(ContentKind kind)
+        +Node buildGameManagePage()
+        +void refreshGameManage()
+        +Node contentRow(ContentItem item, ContentKind kind)
+        +Node buildLoaderTab()
+    }
+    class Platform {
+        <<service>>
+        +Path minecraftDir()$
+        +void reveal(Path path)$
+        +boolean recycle(Path path)$
+    }
+    class FileFetch {
+        <<service>>
+        +boolean download(String url, Path target, String sha1, String sha512, AtomicBoolean c, Object l)$
+    }
+
+    ModrinthClient ..> DependencyKind : 解析 type
+    ModrinthClient ..> ModValidator : requiredOf(deps)
+    ModrinthClient ..> ModIndex : add(requires)
+    CurseForgeClient ..> ContentKind : cfClassId
+    ContentStore ..> ContentKind : 目录/启停分发
+    ContentStore ..> ContentIndex : 登记来源
+    ContentStore ..> Platform : recycle / reveal / minecraftDir
+    ContentStore ..> FileFetch : 下载+哈希
+    ContentStore ..> ContentSource : 标记来源
+    ModAliases ..> ContentKind : 分表隔离
+    LoaderInstaller ..> LoaderType : isInstaller 分流
+    LoaderInstaller ..> OptiFineVersionProvider : versions / downloadUrl
+    LoaderInstaller ..> VersionJson : raw / save 写 gblLoader
+    BmclApiOptiFineVersions ..|> OptiFineVersionProvider : implements
+    EmptyOptiFineVersionProvider ..|> OptiFineVersionProvider : implements
+    OptiFineVersionProvider ..> OptiFineVersion : produces
+    ShellView ..> ModrinthClient : search / allVersions / projects / install
+    ShellView ..> CurseForgeClient : search(classId) / files / downloadUrl
+    ShellView ..> ContentStore : dispatchInstall / scan / setEnabled
+    ShellView ..> ContentIndex : 回显来源
+    ShellView ..> ModAliases : expand(q, kind)
+    ShellView ..> ModValidator : requiredOf
+    ShellView ..> LoaderType : buildLoaderTab / INSTALL_LOADERS
+    ShellView ..> LoaderInstaller : status / install / uninstall
+    ShellView ..> DependencyKind : 三分类渲染
+    ShellView ..> ContentKind : 状态机 kind
+    ShellView ..> ContentSource : 状态机 source
