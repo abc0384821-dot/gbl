@@ -1,0 +1,3859 @@
+/* GBL 启动器 — 界面主题（浅色 / 卡片 / 圆角 / 绿色强调）
+ *
+ * 设计 token（改样式优先动这里，别在组件里写死色值）
+ *   文字   #101828 主标题 · #475467 正文 · #667085 次要 · #98a2b3 弱
+ *   品牌   #37a85a 主色 · #2f9a56 按压 · #e7f6ec 浅绿底 · #237a44 浅绿上的文字
+ *   描边   #e6eaf1 外框 · #ebeff5 卡片边 · #eef1f6 分隔线
+ *   面     #f5f7fa 页面底 · #f7f9fc 悬停底 · #ffffff 卡片/栏
+ *   圆角   控件 10 · 卡片 16 · 外壳 16 · pill 999
+ *   字号   11 弱 / 12 · 12.5 次要 / 13 正文 / 14 · 15 标题 / 24 Hero
+ */
+
+/* 内容框：圆角由 ShellView 的裁剪弧给（值见 CORNER），描边 1px，圆角外面真透桌面（见 LauncherApp） */
+.frame {
+    -fx-font-family: "Microsoft YaHei UI", "PingFang SC", "Source Han Sans SC", "Noto Sans SC", system-ui, sans-serif;
+    -fx-font-size: 13px;
+    -fx-background-color: #f5f7fa;
+    -fx-background-radius: 16;
+    -fx-border-color: #e6eaf1;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-text-fill: #101828;
+}
+
+/* 窗体投影挂在 shell 上（Java 侧 SHADOW，最大化时会被摘掉）——
+   CSS 不要再写一遍 effect，否则 Java 的 setEffect(null) 会被这个规则盖回去。
+   0.9.5 r1：SHADOW 已从 THREE_PASS_BOX/26 降级为 ONE_PASS_BOX/14（库页动效减负），观感保留 */
+
+/* 自绘标题栏：白底 + 一条 1px 细线，高度压到 46，整条栏看着更轻 */
+.app-bar {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #eef1f6 transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 0 12 0 20;
+    -fx-spacing: 10;
+    -fx-min-height: 46;
+}
+
+/* ------------------------------------------------------- 窗口按钮（最小化/最大化/关闭）
+   底色与图标颜色全部由 Java 侧在 hover 时填（见 ShellView.winBtn），这里只保证按钮本身干净：
+   没有边框、没有焦点环、没有默认皮肤那圈灰方块。 */
+.win-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.stroke-icon {
+    -fx-stroke-linecap: round;
+    -fx-stroke-linejoin: round;
+}
+
+.brand {
+    -fx-cursor: hand;
+}
+
+.brand-mark {
+    -fx-fill: #37a85a;
+}
+
+.app-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.2px;
+}
+
+.chip {
+    -fx-background-color: #f2f4f7;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-text-fill: #667085;
+    -fx-font-size: 11.5px;
+    -fx-padding: 5 10 5 10;
+}
+
+.chip-accent {
+    -fx-background-color: #e7f6ec;
+    -fx-text-fill: #237a44;
+}
+
+/* v0.2.3 起这层只当排版壳用：外面那圈椭圆（圆角浅绿胶囊）删了，
+   顶栏里就一枚绿点 + 一句绿字，不该再顶个气泡框。 */
+.status-pill {
+    -fx-padding: 0 4 0 0;
+    -fx-spacing: 7;
+}
+
+/* 状态字恒定绿色，深浅主题都别再盖成灰的 */
+.status-text {
+    -fx-text-fill: #1f7a44;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+}
+
+/* ------------------------------------------------------------------ 侧边栏 */
+.side-bar {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent #eef1f6 transparent transparent;
+    -fx-border-width: 0 1px 0 0;
+}
+
+.nav-section {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 12 6 12;
+    -fx-letter-spacing: 0.6px;
+}
+
+.nav-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-cursor: hand;
+    -fx-padding: 8 12 8 12;
+    -fx-spacing: 12;
+}
+
+.nav-item:hover {
+    -fx-background-color: #f6f8fb;
+}
+
+.nav-item.selected {
+    -fx-background-color: #e7f6ec;
+}
+
+.nav-item .nav-label {
+    -fx-text-fill: #667085;
+    -fx-font-size: 13px;
+}
+
+.nav-item.selected .nav-label {
+    -fx-text-fill: #237a44;
+    -fx-font-weight: bold;
+}
+
+.nav-item .icon-path,
+.stat-icon .icon-path {
+    -fx-fill: #98a2b3;
+}
+
+.nav-item:hover .icon-path,
+.nav-item.selected .icon-path {
+    -fx-fill: #37a85a;
+}
+
+.user-card {
+    -fx-background-color: #f7f9fc;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: #eef1f6;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.avatar {
+    -fx-fill: #e4e9f1;
+}
+
+.user-name {
+    -fx-text-fill: #344054;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: bold;
+    -fx-text-overrun: ellipsis;
+    -fx-max-width: 160px;
+}
+
+/* ------------------------------------------------------------------ 内容区 */
+.content-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0 0 20 0;
+}
+
+.content-scroll > .viewport {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+}
+.content-scroll > .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.content-scroll > .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(71, 85, 105, 0.28);
+    -fx-background-radius: 999;
+    -fx-background-insets: 0 2 0 2;
+}
+.content-scroll > .scroll-bar:vertical .thumb:hover   { -fx-background-color: rgba(71, 85, 105, 0.50); }
+.content-scroll > .scroll-bar:vertical .thumb:pressed { -fx-background-color: rgba(71, 85, 105, 0.66); }
+
+/* 卡片统一浮起来一档：1px 描边 + 极淡投影，别靠实色块分区 */
+.card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-border-color: #ebeff5;
+    -fx-border-width: 1;
+    -fx-effect: null;
+}
+
+/* Hero 是整页的重心，再抬一档：投影更柔更散 */
+.hero {
+    -fx-effect: dropshadow(three-pass-box, #0b1a2b1f, 20, 0.0, 0, 3);
+}
+
+.hero-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 40px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.2px;
+}
+
+.hero-desc {
+    -fx-text-fill: #667085;
+    -fx-font-size: 13px;
+    -fx-text-overrun: ellipsis;
+}
+
+/* ------------------------------------------------------------------ 空态 / 空页
+   没有内容可展示时的一致性表达：一个淡图标 + 一行灰字，撑满所在容器并居中。 */
+.empty-icon {
+    -fx-fill: #dde3ec;
+}
+
+.empty-hint {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 13px;
+}
+
+/* 下载页：v0.1.4 只立起页面，内容全空 */
+.page-blank {
+    -fx-padding: 28;
+    -fx-alignment: center;
+    -fx-fill-width: false;
+}
+
+.page-blank-icon {
+    -fx-fill: #dde3ec;
+}
+
+.page-blank-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.2px;
+}
+
+.page-blank-desc {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 13px;
+}
+
+/* ------------------------------------------------------------------ 按钮 */
+
+/* 0.9.3 按钮统一兜底：任何只挂了默认 .button（或只挂了 padding 类、没定义样式）的按钮，
+   一律走 GBL 风格，杜绝 modena 默认浅灰 + 青色焦点环。
+   放最前，让 .btn-ghost / .btn-primary 等具体类能在后面覆盖。 */
+.button {
+    -fx-background-color: #e8edf3;
+    -fx-background-insets: 0;
+    -fx-border-color: #c5cedb;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: #1b222c;
+    -fx-focus-color: transparent;
+}
+.dark .button {
+    -fx-background-color: #171d26;
+    -fx-background-insets: 0;
+    -fx-border-color: #2f3946;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: #c3cdd9;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+/* 0.9.8：全局按钮按下反馈。只补「自己没定义 :pressed」的那批按钮，
+   后文 .btn-play / .btn-primary / .btn-ghost 各自的 :pressed 配色会照常盖回来，
+   所以启动按钮的绿色渐变不会被这条冲掉。JavaFX CSS 没有 transition / @keyframes，
+   瞬时下压靠这里，扩散涟漪由 ShellView 的场景级涟漪层补上。 */
+.button:pressed {
+    -fx-background-color: #dae2ec;
+    -fx-translate-y: 1px;
+}
+.dark .button:pressed {
+    -fx-background-color: #232d3a;
+    -fx-translate-y: 1px;
+}
+.button:disabled:pressed,
+.dark .button:disabled:pressed {
+    -fx-translate-y: 0px;
+}
+
+/* 品牌绿实心按钮：应用 / 上传并应用 这类主操作 */
+.btn-primary {
+    -fx-background-color: #2f9e58;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8;
+    -fx-border-color: transparent;
+    -fx-border-radius: 8;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+    -fx-padding: 0 18 0 18;
+    -fx-cursor: hand;
+}
+.btn-primary:hover {
+    -fx-background-color: #3bb06a;
+}
+.dark .btn-primary {
+    -fx-background-color: #2f9e58;
+    -fx-background-insets: 0;
+    -fx-text-fill: #ffffff;
+}
+.dark .btn-primary:hover {
+    -fx-background-color: #3bb06a;
+}
+/* 0.9.8：主操作按钮按下时压深一档，配合涟漪层给明确的「点到了」反馈 */
+.btn-primary:pressed {
+    -fx-background-color: #26834a;
+}
+.dark .btn-primary:pressed {
+    -fx-background-color: #26834a;
+}
+
+.btn-play {
+    -fx-background-color: linear-gradient(to bottom, #3cb46b, #2f9a56);
+    -fx-background-insets: 0;
+    -fx-background-radius: 14;
+    -fx-border-color: transparent;
+    -fx-border-radius: 14;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 28 0 28;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, #2f9a5640, 10, 0.0, 0, 2);
+}
+
+.btn-play .icon-path {
+    -fx-fill: #ffffff;
+}
+
+.btn-play:hover {
+    -fx-background-color: linear-gradient(to bottom, #43c177, #34a75e);
+    -fx-effect: dropshadow(three-pass-box, #2f9a5655, 14, 0.0, 0, 3);
+}
+
+.btn-play:pressed {
+    -fx-background-color: linear-gradient(to bottom, #2f9a56, #2a8a4c);
+    -fx-effect: dropshadow(three-pass-box, #2f9a5633, 6, 0.0, 0, 1);
+}
+
+/* 游戏运行中：同一颗按钮切红色「停止游戏」；尺寸/圆角/字体/图标色沿用 .btn-play */
+.btn-play.btn-play-running {
+    -fx-background-color: linear-gradient(to bottom, #e5484d, #b42318);
+    -fx-effect: dropshadow(three-pass-box, #b4231840, 10, 0.0, 0, 2);
+}
+.btn-play.btn-play-running:hover {
+    -fx-background-color: linear-gradient(to bottom, #f06a6e, #c62d20);
+    -fx-effect: dropshadow(three-pass-box, #b4231855, 14, 0.0, 0, 3);
+}
+.btn-play.btn-play-running:pressed {
+    -fx-background-color: linear-gradient(to bottom, #b42318, #93301f);
+    -fx-effect: dropshadow(three-pass-box, #b4231833, 6, 0.0, 0, 1);
+}
+
+/* 0.9.3 r2：深色模式补「启动游戏」普通态绿按钮——否则会被 .dark .button(0,2,0) 反杀成 outline */
+.dark .btn-play {
+    -fx-background-color: linear-gradient(to bottom, #3cb46b, #2f9a56);
+    -fx-background-insets: 0;
+    -fx-background-radius: 14;
+    -fx-border-color: transparent;
+    -fx-border-radius: 14;
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(three-pass-box, #2f9a5640, 10, 0.0, 0, 2);
+}
+.dark .btn-play:hover {
+    -fx-background-color: linear-gradient(to bottom, #43c177, #34a75e);
+    -fx-effect: dropshadow(three-pass-box, #2f9a5655, 14, 0.0, 0, 3);
+}
+.dark .btn-play:pressed {
+    -fx-background-color: linear-gradient(to bottom, #2f9a56, #2a8a4c);
+}
+
+.dark .btn-play.btn-play-running {
+    -fx-background-color: linear-gradient(to bottom, #c62d20, #93301f);
+}
+.dark .btn-play.btn-play-running:hover {
+    -fx-background-color: linear-gradient(to bottom, #d9402f, #a5381f);
+}
+
+.btn-ghost {
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: #e3e8ef;
+    -fx-border-width: 1;
+    -fx-text-fill: #475467;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+    -fx-padding: 0 18 0 18;
+    -fx-cursor: hand;
+}
+
+.btn-ghost .icon-path {
+    -fx-fill: #667085;
+}
+
+.btn-ghost:hover {
+    -fx-border-color: #d3dae3;
+    -fx-background-color: #fbfcfe;
+    -fx-text-fill: #344054;
+}
+/* 0.9.8：白底按钮按下反馈（深色另给一套，避免被 .dark .button:pressed 反杀） */
+.btn-ghost:pressed {
+    -fx-background-color: #eef2f7;
+    -fx-border-color: #c9d2de;
+    -fx-text-fill: #2b3646;
+}
+.dark .btn-ghost:pressed {
+    -fx-background-color: #1d2631;
+    -fx-border-color: #3c4857;
+    -fx-text-fill: #d4dde8;
+}
+
+/* ------------------------------------------------------------------ 列表行 */
+.card-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.row {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-cursor: hand;
+    -fx-padding: 6 8 6 8;
+}
+
+.row:hover {
+    -fx-background-color: #f7f9fc;
+}
+
+.row-title {
+    -fx-text-fill: #344054;
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+}
+
+.row-hint {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 11.5px;
+}
+
+.row-badge {
+    -fx-fill: #f1f4f8;
+}
+
+.row-badge-wrap {
+    -fx-cursor: hand;
+}
+
+/* ------------------------------------------------------------------ 统计卡 */
+.stat-card {
+    -fx-padding: 16 18 16 18;
+    -fx-min-width: 0;
+}
+
+.stat-label {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 11.5px;
+}
+
+.stat-value {
+    -fx-text-fill: #101828;
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+}
+
+.stat-hint {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 11.5px;
+}
+
+/* ------------------------------------------------------------------ 设置页
+   一行设置 = 「标题 + 说明」在左、控件在右，中间一条弹性间隔线撑开。
+   说明文字比标题小一号、弱一档，别让两行字抢同一级视觉重量。 */
+.setting-row {
+    -fx-padding: 11 0 11 0;
+    -fx-spacing: 20;
+    -fx-alignment: center-left;
+    -fx-cursor: default;
+}
+
+/* 说明列给够宽度：窗口放大后整行变宽，说明还卡在 520 就会被挤成一条长尾巴 */
+.setting-row > VBox {
+    -fx-max-width: 620;
+}
+
+.setting-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+}
+
+.setting-desc {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 11.5px;
+    -fx-wrap-text: true;
+}
+
+/* Region 默认不占位：不显式给 1px 高，这条分隔线等于没插 */
+.setting-sep {
+    -fx-background-color: #eef1f6;
+    -fx-background-radius: 0;
+    -fx-min-height: 1;
+    -fx-pref-height: 1;
+    -fx-max-height: 1;
+}
+
+/* ------------------------------------------------------------- 自绘开关
+   填充色只在这里定义：Java 侧 ToggleSwitch 只管几何与滑块位置，
+   深色主题换色时不用回去改代码。轨道是 34x20、滑块 16x16、留 2px 边。 */
+.toggle-track {
+    -fx-fill: #d3dae3;
+    -fx-background-radius: 10;
+}
+
+.toggle-track.on {
+    -fx-fill: #37a85a;
+}
+
+.toggle-thumb {
+    -fx-fill: #ffffff;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(one-pass-box, #0b1a2b33, 3, 0.0, 0, 1);
+}
+
+/* 焦点环：平时透明，键盘 Tab 到开关时才描出来 */
+.toggle-ring {
+    -fx-fill: transparent;
+    -fx-stroke: transparent;
+    -fx-stroke-width: 2;
+}
+
+.toggle-switch:focused .toggle-ring {
+    -fx-stroke: #37a85a;
+}
+
+/* ------------------------------------------------------------- 分组药丸按钮 */
+.seg-btn {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 10;
+    -fx-border-color: #e6eaf1;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-cursor: hand;
+}
+
+.seg-btn:hover {
+    -fx-background-color: #fbfcfe;
+    -fx-border-color: #cfd7e3;
+}
+
+.seg-btn.selected {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+}
+
+.seg-btn-label {
+    -fx-text-fill: #667085;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+}
+
+.seg-btn.selected .seg-btn-label {
+    -fx-text-fill: #237a44;
+    -fx-font-weight: bold;
+}
+
+/* ------------------------------------------------------------- 下拉框 */
+.setting-select {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 10;
+    -fx-border-color: #e3e8ef;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-text-fill: #344054;
+    -fx-font-size: 12.5px;
+    -fx-padding: 0 12 0 12;
+    -fx-min-width: 150;
+    -fx-min-height: 34;
+    -fx-max-height: 34;
+    -fx-cursor: hand;
+}
+
+.setting-select:hover {
+    -fx-border-color: #cfd7e3;
+}
+
+.setting-input {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 10;
+    -fx-border-color: #e3e8ef;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-text-fill: #344054;
+    -fx-font-size: 12.5px;
+    -fx-padding: 0 12 0 12;
+    -fx-min-height: 34;
+    -fx-max-height: 34;
+    -fx-prompt-text-fill: #98a2b3;
+}
+
+.setting-input:focused {
+    -fx-border-color: #4c7dff;
+}
+
+/* ShellView 搜索框：TextField 挂 .search-input，曾缺规则回落 modena 白底黑字方角 */
+.search-input,
+.gbl-input {
+    -fx-background-color: #ffffff;
+    -fx-control-inner-background: #ffffff;
+    -fx-background-radius: 10;
+    -fx-border-color: #e3e8ef;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-text-fill: #344054;
+    -fx-font-size: 12.5px;
+    -fx-padding: 0 12 0 12;
+    -fx-min-height: 34;
+    -fx-pref-height: 34;
+    -fx-max-height: 34;
+    -fx-prompt-text-fill: #98a2b3;
+}
+
+.search-input:hover,
+.gbl-input:hover {
+    -fx-border-color: #d3dae3;
+}
+
+/* 0.9.7：不要再给搜索框加蓝色聚焦边框（用户明确不要蓝框）。
+   聚焦态保持和 hover 同样的描边，有反馈但不抢眼。 */
+.search-input:focused,
+.gbl-input:focused {
+    -fx-border-color: #d3dae3;
+}
+
+.setting-select .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.setting-select .arrow {
+    -fx-background-color: #98a2b3;
+}
+
+.setting-select .list-cell {
+    -fx-text-fill: #344054;
+    -fx-font-size: 12.5px;
+    -fx-padding: 0 12 0 12;
+    -fx-min-height: 30;
+}
+
+/* 0.9.7：显示区选中项回归 0.9.5 原件的浅绿底（r6 曾改成透明，用户要求改回以前的） */
+.setting-select .list-cell:selected {
+    -fx-background-color: #e7f6ec;
+    -fx-text-fill: #237a44;
+}
+
+/* 下拉弹层是独立窗口，选择器要写到 .combo-box-popup */
+.combo-box-popup .list-view {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 10;
+    -fx-border-color: #e6eaf1;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+
+.combo-box-popup .list-cell {
+    -fx-text-fill: #344054;
+    -fx-font-size: 12.5px;
+    -fx-padding: 7 12 7 12;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #f5f7fa;
+}
+
+.combo-box-popup .list-cell:selected {
+    -fx-background-color: #e7f6ec;
+    -fx-text-fill: #237a44;
+}
+
+/* ------------------------------------------------------------- 危险区卡 */
+.danger-card {
+    -fx-border-color: #f0c4c6;
+}
+
+.danger-btn {
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: #f0b4b7;
+    -fx-border-width: 1;
+    -fx-text-fill: #d92d20;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+    -fx-padding: 0 18 0 18;
+    -fx-min-height: 34;
+    -fx-cursor: hand;
+}
+
+.danger-btn:hover {
+    -fx-background-color: #fef3f2;
+    -fx-border-color: #e08b8f;
+    -fx-text-fill: #b42318;
+}
+
+/* 页面级标题 / 说明（设置页顶栏）
+   字号沿用既有梯度：标题 20 追 page-blank-title，说明 13 走次要色 */
+.page-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.2px;
+}
+
+.page-desc {
+    -fx-text-fill: #667085;
+    -fx-font-size: 13px;
+}
+
+/* OptiFine 兼容性中性预提示（安装弹窗内，不含版本阈值） */
+.optifine-scope-hint {
+    -fx-text-fill: #b45309;
+    -fx-font-size: 12.5px;
+    -fx-wrap-text: true;
+}
+.dark .optifine-scope-hint {
+    -fx-text-fill: #fbbf24;
+}
+
+/* ------------------------------------------------------------------ 状态栏 */
+.status-bar {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0 20 0 20;
+    -fx-spacing: 10;
+    -fx-min-height: 38;
+}
+
+.dot {
+    -fx-fill: #37a85a;
+}
+
+/* ============================================================== 下载页（v0.3）
+   一整页的形状：顶部 tab 条 → 搜索 + 类型筛选 → 版本行列表。
+   类名表刻意和设置页那两样错开（tab-btn / filter-chip 而不是 seg-btn / chip）：
+   自测有用「第 n 个 seg-btn」去点分组药丸的写法（WIN_GROUP_CLICK），
+   共用一个类名的话 tab 会把「窗口行为」顶掉，自测点错人还查不出为什么。
+   绿条走 background-insets 画，别用 border 或 padding——后者会把行里的字推得横跳。 */
+
+.tab-bar {
+    -fx-spacing: 8;
+}
+
+.tab-btn {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 10;
+    -fx-border-color: #e6eaf1;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.tab-btn:hover {
+    -fx-background-color: #fbfcfe;
+    -fx-border-color: #cfd7e3;
+}
+
+.tab-btn.selected {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+}
+
+.tab-btn-label {
+    -fx-text-fill: #667085;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+}
+
+.tab-btn.selected .tab-btn-label {
+    -fx-text-fill: #237a44;
+    -fx-font-weight: bold;
+}
+
+.filter-bar {
+    -fx-padding: 14 16 14 16;
+}
+
+.filter-chip {
+    -fx-background-color: #f2f4f7;
+    -fx-background-radius: 999;
+    -fx-border-color: #e6eaf1;
+    -fx-border-radius: 999;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.filter-chip.on {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+}
+
+.filter-chip-label {
+    -fx-text-fill: #667085;
+    -fx-font-size: 11.5px;
+}
+
+.filter-chip.on .filter-chip-label {
+    -fx-text-fill: #237a44;
+    -fx-font-weight: bold;
+}
+
+.version-search {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 10;
+    -fx-border-color: #e3e8ef;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 0 12 0 12;
+    -fx-font-size: 13px;
+    -fx-prompt-text-fill: #98a2b3;
+    -fx-min-height: 34;
+    -fx-pref-height: 34;
+}
+
+.version-search:hover {
+    -fx-border-color: #d3dae3;
+}
+
+.result-count {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 12px;
+}
+
+/* 版本行：细分隔线 + 整行可点，别做成一排按钮那样吵 */
+.version-row {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent transparent #eef1f6 transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-cursor: hand;
+}
+
+.version-row:hover {
+    -fx-background-color: #f7f9fc;
+}
+
+/* 选中态：左边 3px 绿条用 background-insets 画，字一个像素都不动。
+   insets 是 top/right/bottom/left —— 写反了绿条就跑到右边缘去 */
+.version-row.selected {
+    -fx-background-color: #e7f6ec;
+    -fx-background-insets: 0 0 0 3;
+    -fx-background-radius: 0;
+}
+
+.ver-num {
+    -fx-text-fill: #101828;
+    -fx-font-size: 13.5px;
+    -fx-font-weight: bold;
+}
+
+.ver-name {
+    -fx-text-fill: #667085;
+    -fx-font-size: 11.5px;
+}
+
+.ver-date {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 11.5px;
+}
+
+/* 四种版本类型的角标。颜色跟类型语义走：正式绿 / 快照琥珀 / 愚人紫 / 远古灰 */
+.type-badge {
+    -fx-background-color: #f2f4f7;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-text-fill: #667085;
+    -fx-font-size: 11px;
+    -fx-padding: 3 8 3 8;
+}
+
+.type-release {
+    -fx-background-color: #e7f6ec;
+    -fx-text-fill: #237a44;
+}
+
+.type-snapshot {
+    -fx-background-color: #fff4e5;
+    -fx-text-fill: #b45309;
+}
+
+.type-april {
+    -fx-background-color: #f4ecfe;
+    -fx-text-fill: #6941c6;
+}
+
+.type-legacy {
+    -fx-background-color: #f1f4f8;
+    -fx-text-fill: #667085;
+}
+
+.btn-download {
+    -fx-background-color: #37a85a;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9;
+    -fx-border-color: transparent;
+    -fx-border-radius: 9;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+    -fx-cursor: hand;
+    -fx-min-height: 30;
+}
+
+.btn-download:hover {
+    -fx-background-color: #3cb46b;
+}
+
+/* 0.9.3 r2：绿底白图标（与 .btn-play 一致），避免 SVG 人形图标在绿底上默认黑、深色模式看不清 */
+.btn-download .icon-path {
+    -fx-fill: #ffffff;
+}
+
+/* 已排队：绿底绿字，跟「可点」那颗实心绿按钮拉开一眼的区别 */
+.btn-download.queued,
+.btn-download.queued:hover {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+    -fx-border-width: 1;
+    -fx-text-fill: #237a44;
+    -fx-cursor: default;
+}
+
+/* 下载确认弹层：整窗遮罩 + 一张卡（版本 / 体积 / 存到哪 / 取消、下载） */
+.dlg-backdrop {
+    -fx-background-color: #0b1a2b91;
+}
+/* 1.2.4：遮罩祖先带 gbl-compact，只盖操作区；浅色默认 + .dark 覆盖成对。 */
+.gbl-compact .dlg-backdrop {
+    -fx-background-color: #0b1a2b91;
+}
+.dark .gbl-compact .dlg-backdrop {
+    -fx-background-color: #000000a6;
+}
+
+.dlg-card {
+    -fx-background-radius: 18;
+    -fx-border-radius: 18;
+    -fx-effect: null;
+}
+
+/* 皮肤管理弹窗（v0.6.0）：预览框 / 官方默认网格 / 模型分段选择 */
+.skin-preview-box {
+    -fx-background-color: #f2f5fa;
+    -fx-background-radius: 14;
+    -fx-border-color: #e4e9f1;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+}
+.skin-grid {
+    -fx-padding: 4;
+}
+.skin-cell {
+    -fx-padding: 8 10 8 10;
+    -fx-background-color: #f7f9fc;
+    -fx-background-radius: 12;
+    -fx-border-color: #e4e9f1;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+.skin-cell:hover {
+    -fx-border-color: #c2ccda;
+}
+.skin-cell.sel {
+    -fx-border-color: #19b36b;
+    -fx-border-width: 2;
+    -fx-background-color: #e7f6ec;
+}
+.btn-ghost.seg-on {
+    -fx-border-color: #19b36b;
+    -fx-text-fill: #19b36b;
+    -fx-font-weight: bold;
+}
+
+/* 皮肤管理：3D 预览框 / 右侧滚动区 / 「我的皮肤」行 */
+.skin-3d-box {
+    -fx-background-color: #eef2f7;
+    -fx-background-radius: 14;
+    -fx-border-color: #e4e9f1;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+}
+.skin-scroll {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+/* 关键：ScrollPane 的 .viewport 默认白底，只把 ScrollPane 本体设透明不够，会剩一大块白框 */
+.skin-scroll .viewport,
+.skin-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.skin-custom-row {
+    -fx-padding: 8 10 8 10;
+    -fx-background-color: #f7f9fc;
+    -fx-background-radius: 10;
+    -fx-border-color: #e4e9f1;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+.skin-custom-row:hover {
+    -fx-border-color: #c2ccda;
+}
+.skin-custom-row.sel {
+    -fx-border-color: #19b36b;
+    -fx-border-width: 2;
+    -fx-background-color: #e7f6ec;
+}
+
+/* ================================================================ 游戏列表（v0.3.1）
+   一行一个游戏：左边圆点是「当前选中的是哪个」，右边是三点菜单入口。
+   选中态跟版本列表一个路子 —— 左边 3px 绿条用 background-insets 画，字一个像素都不动。
+   background-insets 是 top/right/bottom/left，写反了绿条就跑到右边缘去。 */
+.game-row {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8 8 8 8;
+    -fx-border-color: transparent transparent #eef1f6 transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-cursor: hand;
+}
+
+.game-row:hover {
+    -fx-background-color: #f7f9fc;
+}
+
+.game-row.selected {
+    -fx-background-color: #e7f6ec;
+    -fx-background-insets: 0 0 0 3;
+    -fx-background-radius: 8 8 8 8;
+}
+
+/* 圆点本身就是状态（哪个是当前的），不是动作：未选中是空心圈，选中整颗填实 */
+.game-dot {
+    -fx-fill: #ffffff;
+    -fx-stroke: #c6d0dc;
+    -fx-stroke-width: 1.5;
+}
+
+.game-dot.on {
+    -fx-fill: #37a85a;
+    -fx-stroke: #37a85a;
+}
+
+/* 账号页：当前账号用绿点标记，点非当前的绿点即设为当前（同游戏列表的「当前」语义） */
+.account-dot {
+    -fx-fill: #ffffff;
+    -fx-stroke: #c6d0dc;
+    -fx-stroke-width: 1.5;
+}
+
+.account-dot.on {
+    -fx-fill: #37a85a;
+    -fx-stroke: #37a85a;
+}
+
+.account-name {
+    -fx-text-fill: #101828;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-overrun: ellipsis;
+}
+
+.game-name {
+    -fx-text-fill: #101828;
+    -fx-font-size: 13.5px;
+    -fx-font-weight: bold;
+}
+
+.game-meta {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 11.5px;
+}
+
+/* 三点入口：一整块都能点，hover 才有可见反馈 */
+.game-more {
+    -fx-cursor: hand;
+    -fx-min-width: 34;
+    -fx-pref-width: 34;
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+}
+
+.game-more-icon {
+    -fx-fill: #98a2b3;
+}
+
+.game-more:hover {
+    -fx-background-color: #eef1f6;
+    -fx-background-radius: 7;
+}
+
+.game-empty-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.btn-seed {
+    -fx-background-color: #e7f6ec;
+    -fx-background-radius: 9;
+    -fx-border-color: transparent;
+    -fx-border-radius: 9;
+    -fx-text-fill: #237a44;
+    -fx-cursor: hand;
+    -fx-min-height: 34;
+}
+
+.btn-seed:hover {
+    -fx-background-color: #d8efdf;
+}
+
+.btn-seed-label {
+    -fx-text-fill: #237a44;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+}
+
+/* 行菜单：自绘，不用 ContextMenu —— 那个是 PopupControl，根节点拿不到 shell 的 .dark 类，
+   深色下怎么覆盖都不生效（v0.3 的 ComboBox 下拉踩的是同一个坑） */
+.game-menu {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-border-color: #e4e9f0;
+    -fx-border-radius: 12;
+    -fx-effect: dropshadow(three-pass-box, #0b1a2b40, 18, 0.0, 0, 4);
+}
+
+/* 行菜单的点击捕获层：全透明，绝不压暗界面（v0.3.2）。
+   卡片的投影已经够它「浮」起来，再加一层深色遮罩只会让整窗发黑。 */
+.menu-catch {
+    -fx-background-color: transparent;
+}
+
+.menu-item {
+    -fx-padding: 9 12 9 12;
+    -fx-cursor: hand;
+}
+
+.menu-item:hover {
+    -fx-background-color: #f2f5f9;
+    -fx-background-radius: 0;
+}
+
+.menu-label,
+.menu-danger {
+    -fx-font-size: 13px;
+}
+
+.menu-label {
+    -fx-text-fill: #101828;
+}
+
+.menu-danger {
+    -fx-text-fill: #b42318;
+}
+
+.menu-sep {
+    -fx-background-color: #eef1f6;
+}
+
+.prompt-field {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 9;
+    -fx-border-color: #dfe4ec;
+    -fx-border-radius: 9;
+    -fx-border-width: 1;
+    -fx-text-fill: #101828;
+    -fx-prompt-text-fill: #98a2b3;
+    -fx-padding: 0 12 0 12;
+    -fx-font-size: 13px;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+}
+
+.btn-danger {
+    -fx-background-color: #b42318;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9;
+    -fx-border-color: transparent;
+    -fx-border-radius: 9;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+    -fx-cursor: hand;
+    -fx-min-height: 36;
+}
+
+.btn-danger:hover {
+    -fx-background-color: #c62d20;
+}
+
+.dlg-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* 微软设备码：大字号等宽，方便照着输入 */
+.ms-code {
+    -fx-text-fill: #101828;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Consolas", "Menlo", "Monaco", monospace;
+    -fx-letter-spacing: 2px;
+}
+
+/* 登录链接：像超链接一样可点 */
+.ms-link {
+    -fx-text-fill: #185fa5;
+    -fx-font-size: 13px;
+    -fx-underline: true;
+    -fx-cursor: hand;
+}
+.ms-link:hover {
+    -fx-text-fill: #378add;
+}
+
+.dlg-key {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 12.5px;
+}
+
+.dlg-val {
+    -fx-text-fill: #344054;
+    -fx-font-size: 12.5px;
+}
+
+/* ================================================================== 深色主题
+   v0.2 第一次引入「主题」这个维度。整套覆盖挂在 shell 的 .dark 上（ShellView.applyTheme 增删类名），
+   所以这里一律写后代选择器：.dark .card 这类。
+   注意 .dark 挂的是 shell 而不是 root，root 自己也带 .frame —— 用后代选择器才不会
+   撞上同节点上「后写的规则赢」那套优先级顺序，谁挂类名都不影响。
+   对比度按 WCAG AA 卡：正文 ≥ 4.5:1，弱色选的是 #8794a6（深底上约 5.4:1），别再往灰里调。 */
+
+.dark .frame {
+    -fx-background-color: #10151c;
+    -fx-border-color: #232a34;
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .app-bar {
+    -fx-background-color: #141a22;
+    -fx-border-color: transparent transparent #232a34 transparent;
+}
+
+.dark .side-bar {
+    -fx-background-color: #141a22;
+    -fx-border-color: transparent #232a34 transparent transparent;
+}
+
+.dark .status-bar {
+    -fx-background-color: #141a22;
+}
+
+.dark .card {
+    -fx-background-color: #171d26;
+    -fx-border-color: #262d38;
+    -fx-effect: null;
+}
+
+/* Hero 是整页重心，深色下投影得换成更实的黑 */
+.dark .hero {
+    -fx-effect: dropshadow(three-pass-box, #00000080, 20, 0.0, 0, 3);
+}
+
+/* 主标题级：hero（「还没有游戏」）和空页标题（下载页的「版本列表与下载队列」）之前漏了，
+   一直用的是浅色主题的 #101828，深色底上等于隐形——这就是截图里「字样是黑色的」 */
+.dark .app-title,
+.dark .page-title,
+.dark .card-title,
+.dark .setting-title,
+.dark .user-name,
+.dark .hero-title,
+.dark .page-blank-title {
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .page-desc,
+.dark .hero-desc,
+.dark .row-title {
+    -fx-text-fill: #c3cdd9;
+}
+
+/* 次级灰：浅色那套的 #98a2b3 搬到深底上只有 5.5:1，13px 以下的说明字看着发灰，
+   这里整体提一档到 #b3bfcd（≈9:1）——「深色下所有字样都要看得清」 */
+.dark .setting-desc,
+.dark .nav-section,
+.dark .empty-hint,
+.dark .page-blank-desc,
+.dark .row-hint,
+/* 状态字在两套主题下都是绿的，只是深浅各取一个：浅底要压得住、深底要提得亮。
+   这里的规则必须留着把上一行的浅绿盖掉，否则深色下会退回 #1f7a44 看不清。 */
+.dark .status-text {
+    -fx-text-fill: #7ee2a0;
+}
+
+.dark .chip {
+    -fx-background-color: #232a34;
+    -fx-text-fill: #a7b2c0;
+}
+
+.dark .chip-accent {
+    -fx-background-color: #17351f;
+    -fx-text-fill: #7ee2a0;
+}
+
+/* 保存中的琥珀态、失败的红态：都必须自带底色 + 深色字，
+   不然 Label 会退回 modena 默认的白字，浅色底上直接看不见。 */
+.chip-pending {
+    -fx-background-color: #fff4e5;
+    -fx-text-fill: #b45309;
+}
+
+.dark .chip-pending {
+    -fx-background-color: #3a2f16;
+    -fx-text-fill: #f0b45e;
+}
+
+.chip-error {
+    -fx-background-color: #fdeceb;
+    -fx-text-fill: #b42318;
+}
+
+.dark .chip-error {
+    -fx-background-color: #3d2020;
+    -fx-text-fill: #f5a3a0;
+}
+
+.dark .nav-item:hover {
+    -fx-background-color: #1c232d;
+}
+
+.dark .nav-item.selected {
+    -fx-background-color: #17351f;
+}
+
+.dark .nav-item .nav-label {
+    -fx-text-fill: #a7b2c0;
+}
+
+.dark .nav-item.selected .nav-label {
+    -fx-text-fill: #7ee2a0;
+}
+
+.dark .nav-item .icon-path {
+    -fx-fill: #9aa7b8;
+}
+
+.dark .nav-item:hover .icon-path,
+.dark .nav-item.selected .icon-path {
+    -fx-fill: #37a85a;
+}
+
+.dark .user-card {
+    -fx-background-color: #1c232d;
+    -fx-border-color: #262d38;
+}
+
+.dark .avatar,
+.dark .row-badge {
+    -fx-fill: #242c37;
+}
+
+/* v0.5.3：账号页里的账号名，深色下不能沿用浅色墨黑 */
+.dark .account-name {
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .row:hover {
+    -fx-background-color: #1c232d;
+}
+
+.dark .setting-sep {
+    -fx-background-color: #232a34;
+}
+
+.dark .setting-row {
+    -fx-cursor: default;
+}
+
+.dark .empty-icon,
+.dark .page-blank-icon {
+    -fx-fill: #2f3846;
+}
+
+.dark .toggle-track {
+    -fx-fill: #3a4553;
+}
+
+/* 开关选中态在深色下继续用品牌绿：绿底在深灰上比浅灰底更抓眼，也和浅色的语义一致 */
+.dark .toggle-track.on {
+    -fx-fill: #37a85a;
+}
+
+.dark .danger-card {
+    -fx-border-color: #5c2a2c;
+}
+
+.dark .danger-btn {
+    -fx-background-color: #171d26;
+    -fx-border-color: #6b3134;
+    -fx-text-fill: #f97066;
+}
+
+.dark .danger-btn:hover {
+    -fx-background-color: #2a1a1c;
+    -fx-border-color: #8d4145;
+    -fx-text-fill: #fda29b;
+}
+
+.dark .seg-btn,
+.dark .setting-select {
+    -fx-background-color: #141a22;
+    -fx-border-color: #2f3946;
+}
+
+.dark .seg-btn:hover,
+.dark .setting-select:hover {
+    -fx-background-color: #1c232d;
+    -fx-border-color: #3d4858;
+}
+
+.dark .setting-input {
+    -fx-background-color: #141a22;
+    -fx-border-color: #2f3946;
+    -fx-text-fill: #e9eef5;
+    -fx-prompt-text-fill: #6b7785;
+}
+
+.dark .setting-input:focused {
+    -fx-border-color: #4c7dff;
+}
+
+.dark .search-input,
+.dark .gbl-input {
+    -fx-background-color: #141a22;
+    -fx-control-inner-background: #141a22;
+    -fx-border-color: #2f3946;
+    -fx-text-fill: #e9eef5;
+    -fx-prompt-text-fill: #6b7785;
+}
+
+.dark .search-input:hover,
+.dark .gbl-input:hover {
+    -fx-border-color: #3d4858;
+}
+
+.dark .search-input:focused,
+.dark .gbl-input:focused {
+    -fx-border-color: #3d4858;
+}
+
+.dark .seg-btn.selected {
+    -fx-background-color: #17351f;
+    -fx-border-color: #2f6b41;
+}
+
+.dark .seg-btn-label {
+    -fx-text-fill: #a7b2c0;
+}
+
+.dark .seg-btn.selected .seg-btn-label {
+    -fx-text-fill: #7ee2a0;
+}
+
+/*
+ * ComboBox 的弹层是独立 scene，shell 上的 .dark 传不进去。这里的坑是：
+ * 弹层根节点只有 popup 一个类（combo-box-popup 是皮肤里 CSSBridge 的），
+ * 而且 CSS 根节点的类名**不会**进子节点的后代匹配链 —— 所以 .popup.dark .list-view
+ * 连弹层里的 list-view 都命中不了，写多少条都不生效。
+ * 深色弹层统一交给 popup-dark.css（见 ShellView.themeSelect 的 setOnShown，
+ * 只在深色主题下挂），这里别再补 .popup.dark 的写法。
+ */
+/* 0.9.7：箭头按钮回归 0.9.5 原件的深灰实底 + 描边（r6 曾改成透明） */
+.dark .setting-select .arrow-button {
+    -fx-background-color: #171d26;
+    -fx-border-color: #2f3946;
+}
+
+.dark .setting-select .list-cell {
+    -fx-text-fill: #dfe6ef;
+}
+
+/* ComboBox 的箭头是画背景色的，不是文字色 */
+.dark .setting-select .arrow {
+    -fx-background-color: #9aa7b8;
+}
+
+.dark .setting-select .list-cell:selected {
+    -fx-background-color: #17351f;
+    -fx-text-fill: #7ee2a0;
+}
+
+.dark .btn-ghost {
+    -fx-background-color: #171d26;
+    -fx-background-insets: 0;
+    -fx-border-color: #2f3946;
+    -fx-text-fill: #c3cdd9;
+}
+
+.dark .btn-ghost:hover {
+    -fx-background-color: #1c232d;
+    -fx-border-color: #3d4858;
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .btn-ghost .icon-path {
+    -fx-fill: #9aa7b8;
+}
+
+.dark .content-scroll > .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(203, 213, 225, 0.26);
+    -fx-background-radius: 999;
+    -fx-background-insets: 0 2 0 2;
+}
+.dark .content-scroll > .scroll-bar:vertical .thumb:hover   { -fx-background-color: rgba(203, 213, 225, 0.46); }
+.dark .content-scroll > .scroll-bar:vertical .thumb:pressed { -fx-background-color: rgba(203, 213, 225, 0.60); }
+
+/* ------------------------------------------------- 下载页（v0.3）深色变体
+   顺手补的一处结构性差异：筛选条的搜索框是 TextField，modena 给 .text-field 画的是
+   「输入框底色 + 白字 + 灰占位符」，不显式反色的话深色下就是一块亮白条。 */
+
+.dark .tab-btn {
+    -fx-background-color: #141a22;
+    -fx-border-color: #2f3946;
+}
+
+.dark .tab-btn:hover {
+    -fx-background-color: #1c232d;
+    -fx-border-color: #3d4858;
+}
+
+.dark .tab-btn.selected {
+    -fx-background-color: #17351f;
+    -fx-border-color: #2f6b41;
+}
+
+.dark .tab-btn-label {
+    -fx-text-fill: #a7b2c0;
+}
+
+.dark .tab-btn.selected .tab-btn-label {
+    -fx-text-fill: #7ee2a0;
+}
+
+.dark .filter-chip {
+    -fx-background-color: #232a34;
+    -fx-border-color: #2f3946;
+}
+
+.dark .filter-chip.on {
+    -fx-background-color: #17351f;
+    -fx-border-color: #2f6b41;
+}
+
+.dark .filter-chip-label {
+    -fx-text-fill: #a7b2c0;
+}
+
+.dark .filter-chip.on .filter-chip-label {
+    -fx-text-fill: #7ee2a0;
+}
+
+.dark .version-search {
+    -fx-background-color: #141a22;
+    -fx-border-color: #2f3946;
+    -fx-text-fill: #dfe6ef;
+    -fx-prompt-text-fill: #8794a6;
+}
+
+.dark .version-search:hover {
+    -fx-border-color: #3d4858;
+}
+
+.dark .result-count {
+    -fx-text-fill: #8794a6;
+}
+
+.dark .version-row {
+    -fx-border-color: transparent transparent #232a34 transparent;
+}
+
+.dark .version-row:hover {
+    -fx-background-color: #1c232d;
+}
+
+.dark .version-row.selected {
+    -fx-background-color: #17351f;
+}
+
+.dark .ver-num {
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .ver-name,
+.dark .ver-date {
+    -fx-text-fill: #9aa7b8;
+}
+
+.dark .type-badge {
+    -fx-background-color: #232a34;
+}
+
+.dark .type-release {
+    -fx-background-color: #17351f;
+    -fx-text-fill: #7ee2a0;
+}
+
+.dark .type-snapshot {
+    -fx-background-color: #3a2f16;
+    -fx-text-fill: #f0b45e;
+}
+
+.dark .type-april {
+    -fx-background-color: #2e2340;
+    -fx-text-fill: #c9b6ff;
+}
+
+.dark .type-legacy {
+    -fx-background-color: #232a34;
+    -fx-text-fill: #a7b2c0;
+}
+
+/* 0.9.3 r2：深色模式「下载 / 添加 / 删除」按钮补绿底——否则被 .dark .button(0,2,0) 反杀成深灰 outline */
+.dark .btn-download {
+    -fx-background-color: #2f9e58;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9;
+    -fx-border-color: transparent;
+    -fx-border-radius: 9;
+    -fx-text-fill: #ffffff;
+    -fx-min-height: 30;
+}
+.dark .btn-download:hover {
+    -fx-background-color: #3bb06a;
+}
+.dark .btn-download .icon-path {
+    -fx-fill: #ffffff;
+}
+
+.dark .btn-download.queued,
+.dark .btn-download.queued:hover {
+    -fx-background-color: #17351f;
+    -fx-border-color: #2f6b41;
+    -fx-text-fill: #7ee2a0;
+}
+
+.dark .dlg-backdrop {
+    -fx-background-color: #000000a6;
+}
+
+.dark .dlg-title {
+    -fx-text-fill: #e9eef5;
+}
+
+/* 皮肤管理弹窗深色样式（v0.6.0） */
+.dark .skin-preview-box {
+    -fx-background-color: #1b222c;
+    -fx-border-color: #2a323d;
+}
+.dark .skin-cell {
+    -fx-background-color: #1b222c;
+    -fx-border-color: #2a323d;
+}
+.dark .skin-cell:hover {
+    -fx-border-color: #3a4452;
+}
+.dark .skin-cell.sel {
+    -fx-border-color: #19b36b;
+    -fx-background-color: #16251c;
+}
+.dark .btn-ghost.seg-on {
+    -fx-border-color: #19b36b;
+    -fx-text-fill: #4fd399;
+}
+
+/* 皮肤管理深色样式 */
+.dark .skin-3d-box {
+    -fx-background-color: #141a22;
+    -fx-border-color: #2a323d;
+}
+.dark .skin-custom-row {
+    -fx-background-color: #1b222c;
+    -fx-border-color: #2a323d;
+}
+.dark .skin-custom-row:hover {
+    -fx-border-color: #3a4452;
+}
+.dark .skin-custom-row.sel {
+    -fx-border-color: #19b36b;
+    -fx-background-color: #16251c;
+}
+.dark .skin-scroll,
+.dark .skin-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.dark .ms-code {
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .ms-link {
+    -fx-text-fill: #6cb4f0;
+}
+.dark .ms-link:hover {
+    -fx-text-fill: #9fd0ff;
+}
+
+.dark .dlg-key {
+    -fx-text-fill: #8794a6;
+}
+
+.dark .dlg-val {
+    -fx-text-fill: #dfe6ef;
+}
+
+/* ============================================== 深色下的游戏列表（v0.3.1）
+   跟浅色一一对应：选中行的底色换成深绿（#16251c 而不是 #e7f6ec），
+   圆点空心圈换成深底色的描边，三点图标用 #8794a6 这个已经验过 5.4:1 的弱色。 */
+.dark .game-row:hover {
+    -fx-background-color: #1b222c;
+}
+
+/* 选中行在深色下也得压得住：用深绿而不是浅绿，否则白字落在浅底上直接糊掉 */
+.dark .game-row.selected {
+    -fx-background-color: #16251c;
+    -fx-background-insets: 0 0 0 3;
+}
+
+.dark .game-dot {
+    -fx-fill: #141a22;
+    -fx-stroke: #4a5666;
+}
+
+.dark .game-dot.on {
+    -fx-fill: #3cb46b;
+    -fx-stroke: #3cb46b;
+}
+
+.dark .game-name {
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .game-meta {
+    -fx-text-fill: #8794a6;
+}
+
+.dark .game-more-icon {
+    -fx-fill: #8794a6;
+}
+
+.dark .game-more:hover {
+    -fx-background-color: #1f2733;
+}
+
+.dark .game-empty-title {
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .btn-seed {
+    -fx-background-color: #16251c;
+    -fx-border-color: #2a4a34;
+}
+
+.dark .btn-seed:hover {
+    -fx-background-color: #1c3223;
+}
+
+.dark .btn-seed-label {
+    -fx-text-fill: #7ee2a0;
+}
+
+.dark .game-menu {
+    -fx-background-color: #171d26;
+    -fx-border-color: #2a323e;
+    -fx-effect: dropshadow(three-pass-box, #00000080, 18, 0.0, 0, 4);
+}
+
+.dark .menu-item:hover {
+    -fx-background-color: #1f2733;
+}
+
+.dark .menu-label {
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .menu-danger {
+    -fx-text-fill: #f09595;
+}
+
+.dark .menu-sep {
+    -fx-background-color: #232a34;
+}
+
+.dark .prompt-field {
+    -fx-background-color: #141a22;
+    -fx-border-color: #2a323e;
+    -fx-text-fill: #dfe6ef;
+    -fx-prompt-text-fill: #8794a6;
+}
+
+.dark .btn-danger {
+    -fx-background-color: #93301f;
+    -fx-background-insets: 0;
+}
+
+.dark .btn-danger:hover {
+    -fx-background-color: #a5381f;
+}
+
+/* ---------------------------------------- 官方清单状态条 / 下载队列（v0.3.5） */
+
+.manifest-state,
+.switch-label,
+.queue-count {
+    -fx-text-fill: #667085;
+    -fx-font-size: 12.5px;
+}
+
+/* 「官方新增」那一枚：和类型徽标一样轻，但用绿区分「这是新来的」 */
+.fresh-badge {
+    -fx-background-color: #e7f6ec;
+    -fx-background-radius: 6;
+    -fx-text-fill: #237a44;
+    -fx-font-size: 11px;
+    -fx-padding: 2 6 2 6;
+}
+
+.queue-order {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+/* 状态默认灰（排队、还没开始）；下完了 / 下砸了另有颜色，见下面 v0.4 那一段 */
+.queue-status {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 12px;
+}
+
+.dark .manifest-state,
+.dark .switch-label,
+.dark .queue-count {
+    -fx-text-fill: #98a2b3;
+}
+
+.dark .fresh-badge {
+    -fx-background-color: #1d3325;
+    -fx-text-fill: #6fd39a;
+}
+
+.dark .queue-order,
+.dark .queue-status {
+    -fx-text-fill: #7d8794;
+}
+
+/* -------------------------------------------- 下载进度条 / 队列状态（v0.4，真下得动了） */
+
+/*
+ * 轨道是一行里唯一被抻满的块，内层 fill 的宽度按它的百分比长——
+ * 绑的是 track.widthProperty()，所以窗口一变宽进度条也跟着长（见 ShellView.queueRow）。
+ */
+.queue-progress {
+    -fx-background-color: #eaecf0;
+    -fx-background-radius: 3;
+}
+
+.queue-progress-fill {
+    -fx-background-color: #37a85a;
+    -fx-background-radius: 3;
+}
+
+/* 总长未知（官方不给 Content-Length）：一小截浅绿，别编一个百分比来糊 */
+.queue-progress-fill.unknown {
+    -fx-background-color: #a9dcbc;
+}
+
+/* 状态按语义上色：装好了是绿的、下砸了是红的，不用凑近去读那行小字 */
+.queue-status-done {
+    -fx-text-fill: #237a44;
+}
+
+.queue-status-failed {
+    -fx-text-fill: #b42318;
+}
+
+.queue-status-queued {
+    -fx-text-fill: #98a2b3;
+}
+
+/* 下完的行把序号压低一点，剩下的注意力留给还在下的那几行 */
+.queue-done .queue-order {
+    -fx-text-fill: #667085;
+}
+
+.dark .queue-progress {
+    -fx-background-color: #2b3440;
+}
+
+.dark .queue-progress-fill {
+    -fx-background-color: #4cbf72;
+}
+
+.dark .queue-progress-fill.unknown {
+    -fx-background-color: #2f5c40;
+}
+
+/* -------------------------------------------- 启动加载层（v0.5，点启动到游戏起来之间）
+   一层整窗遮罩 + 一张卡：标题写「正在启动 XX」，中间是阶段文字和一根进度条，
+   底下「取消」。这层要真的挡住底下的界面（补库补资源那阵子点别的没有意义），
+   所以遮罩不吃鼠标穿透；「点外面关掉」也不给它——要关就得点「取消」或按 Esc。 */
+.launch-backdrop {
+    -fx-background-color: #0b1a2b99;
+}
+.gbl-compact .launch-backdrop {
+    -fx-background-color: #0b1a2b99;
+}
+.dark .gbl-compact .launch-backdrop {
+    -fx-background-color: #0b1a2bcc;
+}
+
+.launch-card {
+    -fx-background-radius: 18;
+    -fx-border-radius: 18;
+    -fx-effect: dropshadow(three-pass-box, #0b1a2b59, 30, 0.0, 0, 6);
+}
+
+.launch-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #101828;
+}
+
+.launch-stage {
+    -fx-font-size: 13px;
+    -fx-text-fill: #475467;
+}
+
+.launch-tip {
+    -fx-font-size: 12px;
+    -fx-text-fill: #98a2b3;
+}
+
+.launch-progress-fill {
+    -fx-background-color: #37a85a;
+}
+
+/*
+ * r4：启动补依赖 / JVM 已拉起阶段的不确定态（LaunchProgress ratio<0）。
+ * JavaFX CSS 不支持 @keyframes / CSS 动画，脉动由 ShellView 的 Timeline 驱动
+ * -fx-opacity 呼吸（见 startLaunchIndeterminate）；这里只负责更亮的配色，
+ * 让「在动、只是不知道百分比」一眼可辨，别定格成一根固定小绿块。
+ */
+.launch-progress-fill.indeterminate {
+    -fx-background-color: #6cc98a;
+    -fx-opacity: 0.85;   /* r4 脉动基线：ShellView Timeline 用 1.0↔0.3 呼吸覆盖，停动画时复位 1.0 */
+    -fx-background-radius: 3;
+}
+
+.dark .launch-backdrop {
+    -fx-background-color: #0b1a2bcc;
+}
+
+.dark .launch-title {
+    -fx-text-fill: #e4e7ec;
+}
+
+.dark .launch-stage {
+    -fx-text-fill: #98a2b3;
+}
+
+.dark .launch-progress-fill {
+    -fx-background-color: #4cbf72;
+}
+
+.dark .launch-progress-fill.indeterminate {
+    -fx-background-color: #8fe0a8;
+    -fx-opacity: 0.85;   /* r4：同浅色，opacity 呼吸由 ShellView Timeline 驱动，此处只是基线 */
+    -fx-background-radius: 3;
+}
+
+.dark .queue-status-done {
+    -fx-text-fill: #6fd39a;
+}
+
+.dark .queue-status-failed {
+    -fx-text-fill: #ef6a6a;
+}
+
+.dark .queue-status-queued {
+    -fx-text-fill: #7d8794;
+}
+
+.dark .queue-done .queue-order {
+    -fx-text-fill: #98a2b3;
+}
+
+/* -------------------------------------------- 队列卡片与行的对齐 / 尺寸（v0.4.1） */
+
+/*
+ * 行以前是零内边距直接贴着卡片圆角画的，序号「1.」几乎压在描边上——
+ * 这就是用户说的「项和外面的矩形对不齐」。卡片先留一圈，行再留一圈，
+ * 内容才落在圆角矩形里头而不是骑在框上。
+ */
+.queue-list {
+    -fx-padding: 8 10 8 10;
+}
+
+.queue-row {
+    -fx-padding: 12 16 12 16;
+    -fx-min-height: 56;
+    -fx-background-radius: 10;
+}
+
+/* 最后一行不拖分隔线：那条线会横在卡片下圆角上。
+   JavaFX 没有 :last-child，这个类名由 refreshQueueList 自己贴上去。 */
+.queue-row.last {
+    -fx-border-color: transparent;
+}
+
+.queue-empty {
+    -fx-min-height: 120;
+}
+
+/* -------------------------------------------- 左下角临时提示（v0.4.1） */
+
+/* 「XX开始下载！」「XX下载完成！」那一小条：深色气泡 + 白字，深浅两套跟着主题走 */
+.toast {
+    -fx-background-color: #101828ee;
+    -fx-background-radius: 10;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-padding: 10 16 10 16;
+    -fx-effect: dropshadow(three-pass-box, #0b1a2b3d, 14, 0.0, 0, 3);
+}
+
+/* 1.2.5 A：短提示回右下角，气泡本体沿用深灰黑圆角长条 + 白字；深色用 GBL 碳灰，不引入蓝灰。 */
+.dark .toast {
+    -fx-background-color: #1b2026f2;
+    -fx-text-fill: #e6edf5;
+}
+
+/* ------------------------------------------------------------------ 控制台（v0.4.7 起游戏能真跑了）
+   输出区一律用终端那套深色：日志本身就是黑底的东西，套在浅色卡片里既刺眼又难认。 */
+
+.console-status {
+    -fx-text-fill: #475467;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
+.console-reason {
+    -fx-text-fill: #b42318;
+    -fx-font-size: 13px;
+    -fx-label-padding: 10 12 10 12;
+    -fx-background-color: #fef3f2;
+    -fx-background-radius: 12;
+    -fx-border-color: #fda29b;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+
+.console-out {
+    -fx-font-family: "Cascadia Mono", Consolas, "JetBrains Mono", Menlo, monospace;
+    -fx-font-size: 12px;
+    -fx-background-color: #0f1720;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-width: 0;
+    -fx-text-fill: #d6e2f0;
+    -fx-padding: 12 14 12 14;
+    -fx-min-height: 340;
+}
+
+.console-out .content {
+    -fx-background-color: transparent;
+}
+
+.console-out .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+/* 控制台上的停止 / 复制按钮：原先只有 padding 和字号、没有底色，会退回 modena 默认浅灰 + 青色焦点环。
+   这里给上真实的背景 / 描边 / 字色并摘掉焦点环，浅色与 .dark 两套都覆盖。 */
+.console-stop,
+.console-copy {
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
+    -fx-border-color: #e3e8ef;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: #475467;
+    -fx-font-size: 12px;
+    -fx-padding: 0 14 0 14;
+    -fx-cursor: hand;
+    -fx-focus-color: transparent;
+}
+.console-stop:hover,
+.console-copy:hover {
+    -fx-border-color: #cfd7e3;
+    -fx-background-color: #fbfcfe;
+    -fx-text-fill: #344054;
+}
+.dark .console-stop,
+.dark .console-copy {
+    -fx-background-color: #171d26;
+    -fx-background-insets: 0;
+    -fx-border-color: #2f3946;
+    -fx-text-fill: #c3cdd9;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+.dark .console-stop:hover,
+.dark .console-copy:hover {
+    -fx-background-color: #1c232d;
+    -fx-border-color: #3d4858;
+    -fx-text-fill: #e9eef5;
+}
+
+.dark .console-status {
+    -fx-text-fill: #98a2b3;
+}
+
+.dark .console-reason {
+    -fx-text-fill: #fda29b;
+    -fx-background-color: #3b2327;
+    -fx-border-color: #7a3038;
+}
+
+/* 0.9.3 对话框深色化：Alert 自带 Stage，加 .dark 后要单独给对话框面板与内部文字上深色，
+   否则整窗仍是 modena 浅灰底 + 深色字（和「深色化」指纹对不上）。
+   注意 .dark 是加在对话框面板自身上，所以用复合选择器 .dark.dialog-pane，而不是后代选择器。 */
+.dark.dialog-pane {
+    -fx-background-color: #171d26;
+}
+.dark.dialog-pane .label {
+    -fx-text-fill: #e9eef5;
+}
+.dark.dialog-pane .content.label,
+.dark.dialog-pane .content {
+    -fx-text-fill: #c3cdd9;
+}
+
+/* 安装新游戏弹窗（HMCL 风格）：实例名 + 8 张组件卡
+   1.2.6：宽度 560（上限 580），高度由内容撑开（≤460），八卡紧凑等高；深色复用 .dark .card 碳灰。 */
+.install-card {
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-max-width: 580;
+    -fx-effect: dropshadow(three-pass-box, #0b1a2b40, 22, 0.0, 0, 5);
+}
+/* 1.2.6：安装弹窗内八张组件卡统一压低到 56，八卡等高且整卡 ≤460。 */
+.install-card .comp-card { -fx-min-height: 54; }
+.dark .install-card {
+    -fx-background-color: #171d26;
+    -fx-border-color: #262d38;
+    -fx-effect: dropshadow(three-pass-box, #00000099, 18, 0.0, 0, 6);
+}
+.install-grid {
+    -fx-alignment: center-left;
+}
+.comp-card {
+    -fx-background-color: #f7f9fc;
+    -fx-background-radius: 12;
+    -fx-border-color: #e4e9f1;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-min-height: 62;
+}
+.comp-card:hover {
+    -fx-border-color: #c2ccda;
+}
+.comp-card.selected {
+    -fx-border-color: #19b36b;
+    -fx-border-width: 2;
+    -fx-background-color: #e7f6ec;
+}
+.comp-card.disabled {
+    -fx-opacity: 0.5;
+    -fx-cursor: default;
+}
+.comp-icon {
+    -fx-fill: #475467;
+}
+.comp-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 13.5px;
+    -fx-font-weight: bold;
+}
+.comp-sub {
+    -fx-text-fill: #667085;
+    -fx-font-size: 12px;
+}
+.comp-badge {
+    -fx-text-fill: #475467;
+    -fx-font-size: 11.5px;
+    -fx-background-color: #eef2f7;
+    -fx-background-radius: 7;
+    -fx-border-color: #e4e9f1;
+    -fx-border-radius: 7;
+    -fx-border-width: 1;
+    -fx-padding: 1 7 1 7;
+}
+.dark .comp-card {
+    -fx-background-color: #1b2433;
+    -fx-border-color: #2b3a4f;
+}
+.dark .comp-card:hover {
+    -fx-border-color: #3a4d66;
+}
+.dark .comp-card.selected {
+    -fx-border-color: #19b36b;
+    -fx-background-color: #143524;
+}
+.dark .comp-icon {
+    -fx-fill: #9aa7b8;
+}
+.dark .comp-title {
+    -fx-text-fill: #e6edf6;
+}
+.dark .comp-sub {
+    -fx-text-fill: #8a97a8;
+}
+.dark .comp-badge {
+    -fx-text-fill: #9aa7b8;
+    -fx-background-color: #243042;
+    -fx-border-color: #2b3a4f;
+}
+
+/* ==================================================== 游戏管理页：分段（已装加载器 / 已装模组）
+   卡片壳沿用 .card（圆角 / 描边 / 投影），这里只补分段标题与内部间距。 */
+.mgmt-section-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* ==================================================== Mod 中心：搜索结果封面网格 */
+.mod-grid {
+    -fx-padding: 2 0 2 0;
+}
+
+/* 一张模组卡片：封面 + 标题 + 简介 + 下载量，整卡可点开详情 */
+.mod-card {
+    -fx-pref-width: 360;
+    -fx-padding: 12 14 12 14;
+    -fx-cursor: hand;
+}
+.mod-card:hover {
+    -fx-border-color: #a9dcbc;
+    -fx-background-color: #fbfdfb;
+}
+
+/* 封面（已装模组 40 / 卡片 56 / 详情 72）：圆角裁切在 Java 侧做。
+   0.9.4 r2：内容页一屏 48 张卡，每张卡的 .card 已有一层投影，这里再加一层会翻倍；
+   故封面不再投影，把每帧重绘成本压回去（动效减负）。详情弹窗封面另见 .mod-detail-cover。 */
+.mod-cover {
+    -fx-effect: null;
+}
+
+/* 详情弹窗内 */
+.mod-detail-desc {
+    -fx-text-fill: #475467;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 3px;
+}
+.mod-tags {
+    -fx-padding: 2 0 2 0;
+}
+.mod-links .hyperlink {
+    -fx-border-color: transparent;
+    -fx-text-fill: #237a44;
+    -fx-font-size: 12px;
+    -fx-underline: false;
+    -fx-cursor: hand;
+    -fx-padding: 4 8 4 8;
+}
+.mod-links .hyperlink:hover {
+    -fx-text-fill: #2f9a56;
+    -fx-underline: true;
+}
+
+/* 按游戏版本分组的版本列表 */
+.mod-group-title {
+    -fx-text-fill: #475467;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 0 0 0;
+}
+.mod-version-row {
+    -fx-cursor: default;
+}
+
+/* 详情弹窗：前置依赖板块（0.8.5 新增，模仿 HMCL 提醒下载前置） */
+.mod-deps {
+    -fx-padding: 4 0 4 0;
+}
+.mod-dep-row {
+    -fx-cursor: default;
+}
+.mod-dep-required {
+    -fx-text-fill: #b54708;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+}
+.mod-dep-ok {
+    -fx-text-fill: #237a44;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+}
+.mod-dep-warn {
+    -fx-text-fill: #b42318;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+    -fx-background-color: #fef3f2;
+    -fx-background-radius: 8;
+    -fx-border-color: #fda29b;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 8 10 8 10;
+}
+
+/* 分类筛选胶囊（模组页）：和 .filter-chip 同款观感，但用独立类避免互相串 */
+.mod-cat-row {
+    -fx-padding: 2 0 2 0;
+}
+.mod-cat-chip {
+    -fx-background-color: #f2f4f7;
+    -fx-background-radius: 999;
+    -fx-border-color: #e6eaf1;
+    -fx-border-radius: 999;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-padding: 5 12 5 12;
+    -fx-text-fill: #667085;
+    -fx-font-size: 11.5px;
+}
+.mod-cat-chip.on {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+    -fx-text-fill: #237a44;
+    -fx-font-weight: bold;
+}
+
+/* 小标签：分类 / 加载器 / 版本类型（稳定 / 测试 / 快照） */
+.tag {
+    -fx-background-color: #eef2f7;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-border-color: #e4e9f1;
+    -fx-border-width: 1;
+    -fx-text-fill: #475467;
+    -fx-font-size: 11px;
+    -fx-padding: 2 8 2 8;
+}
+.tag-cat {
+    -fx-background-color: #eef2f7;
+    -fx-border-color: #e4e9f1;
+    -fx-text-fill: #475467;
+}
+.tag-loader {
+    -fx-background-color: #eaf1fb;
+    -fx-border-color: #cfe0f5;
+    -fx-text-fill: #2b6cb0;
+}
+.tag-loader-sm {
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+}
+.tag-release {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+    -fx-text-fill: #237a44;
+}
+.tag-beta {
+    -fx-background-color: #fff3e0;
+    -fx-border-color: #f3d9a8;
+    -fx-text-fill: #b9740a;
+}
+.tag-alpha {
+    -fx-background-color: #fdeaea;
+    -fx-border-color: #f3c2c2;
+    -fx-text-fill: #c0392b;
+}
+.tag-other {
+    -fx-background-color: #eef2f7;
+    -fx-border-color: #e4e9f1;
+    -fx-text-fill: #667085;
+}
+
+/* ------------------------------------------------------- 深色主题：游戏管理分段 + Mod 中心 */
+.dark .mgmt-section-title {
+    -fx-text-fill: #e9eef5;
+}
+.dark .mod-card:hover {
+    -fx-border-color: #3a4d66;
+    -fx-background-color: #1b2433;
+}
+.dark .mod-detail-desc {
+    -fx-text-fill: #c3cdd9;
+}
+.dark .mod-group-title {
+    -fx-text-fill: #9aa7b8;
+}
+.dark .mod-dep-required {
+    -fx-text-fill: #fdba74;
+}
+.dark .mod-dep-ok {
+    -fx-text-fill: #7ee2a0;
+}
+.dark .mod-dep-warn {
+    -fx-text-fill: #f97066;
+    -fx-background-color: #3a1d1b;
+    -fx-border-color: #7f1d1d;
+}
+.dark .mod-cat-chip {
+    -fx-background-color: #232a34;
+    -fx-border-color: #2b3a4f;
+    -fx-text-fill: #a7b2c0;
+}
+.dark .mod-cat-chip.on {
+    -fx-background-color: #17351f;
+    -fx-border-color: #19b36b;
+    -fx-text-fill: #7ee2a0;
+}
+.dark .tag {
+    -fx-background-color: #243042;
+    -fx-border-color: #2b3a4f;
+    -fx-text-fill: #9aa7b8;
+}
+.dark .tag-cat {
+    -fx-background-color: #243042;
+    -fx-border-color: #2b3a4f;
+    -fx-text-fill: #9aa7b8;
+}
+.dark .tag-loader {
+    -fx-background-color: #15263a;
+    -fx-border-color: #234467;
+    -fx-text-fill: #6fb1e8;
+}
+.dark .tag-loader-sm {
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+}
+.dark .tag-release {
+    -fx-background-color: #17351f;
+    -fx-border-color: #19b36b;
+    -fx-text-fill: #7ee2a0;
+}
+.dark .tag-beta {
+    -fx-background-color: #3a2c14;
+    -fx-border-color: #6b4e1e;
+    -fx-text-fill: #e0a64a;
+}
+.dark .tag-alpha {
+    -fx-background-color: #3a1c1c;
+    -fx-border-color: #6b2b2b;
+    -fx-text-fill: #e88a7a;
+}
+.dark .tag-other {
+    -fx-background-color: #243042;
+    -fx-border-color: #2b3a4f;
+    -fx-text-fill: #8a97a8;
+}
+.dark .mod-links .hyperlink {
+    -fx-text-fill: #7ee2a0;
+}
+.dark .mod-links .hyperlink:hover {
+    -fx-text-fill: #19b36b;
+}
+
+/* ==================================================== 0.8.6 D2：数据源切换 / 分类 / 封面
+   这几个类此前只在 Java 侧 getStyleClass() 里出现过、CSS 全表无规则：按钮没有固定尺寸、
+   没有选中态，布局一被挤压就「整排消失」。这里补齐；并给 Mod 中心内容区设统一宽度上限，
+   杜绝分类胶囊行把工具栏 / 卡片网格撑开导致的按钮被挤出视口、列数漂移。 */
+.source-toggle {
+    -fx-alignment: center-left;
+    -fx-min-width: 258;
+    -fx-max-width: 300;
+}
+
+.src-btn {
+    -fx-background-color: #f2f4f7;
+    -fx-background-radius: 8;
+    -fx-border-color: #e6eaf1;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-text-fill: #667085;
+    -fx-font-size: 11.5px;
+    -fx-padding: 6 10 6 10;
+    -fx-min-height: 34;
+    -fx-pref-height: 34;
+    -fx-max-height: 34;
+    -fx-cursor: hand;
+}
+
+.src-btn:hover {
+    -fx-border-color: #a9dcbc;
+}
+
+.src-btn.on {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+    -fx-text-fill: #237a44;
+    -fx-font-weight: bold;
+}
+
+.mod-cat-retry {
+    -fx-text-fill: #b54708;
+    -fx-border-color: #fda29b;
+}
+
+/* 详情弹窗封面：圆角在 Java 侧 clip，这里只给投影；失败时的占位图也走同一个 view */
+.mod-detail-cover {
+    -fx-effect: dropshadow(one-pass-box, #0b1a2b10, 6, 0.0, 0, 2);
+}
+
+/* Mod 中心内容区统一宽度上限（Java 侧同时 setMaxWidth，双保险） */
+.mod-tab-body,
+.mod-tools,
+.mod-cat-row,
+.mod-grid {
+    -fx-max-width: 1140;
+}
+
+.dark .src-btn {
+    -fx-background-color: #232a34;
+    -fx-border-color: #2b3a4f;
+    -fx-text-fill: #a7b2c0;
+}
+.dark .src-btn:hover {
+    -fx-border-color: #19b36b;
+}
+.dark .src-btn.on {
+    -fx-background-color: #17351f;
+    -fx-border-color: #19b36b;
+    -fx-text-fill: #7ee2a0;
+}
+.dark .mod-cat-retry {
+    -fx-text-fill: #fdba74;
+    -fx-border-color: #7f1d1d;
+}
+
+
+/* ==================================================== 0.8.6 D3：卡片 / 详情 / 版本行分区
+   HMCL 式分区结构，但保留并强化 GBL 已有的信息密度（作者 / 下载量 / 来源徽章 / 占位图）。
+   .mod-detail-cover 已在 D2 段落定义，这里不重复。 */
+.mod-sep {
+    -fx-background-color: #e6eaf1;
+    -fx-min-height: 1;
+    -fx-pref-height: 1;
+    -fx-max-height: 1;
+}
+.dark .mod-sep {
+    -fx-background-color: #2b3a4f;
+}
+
+.mod-card-summary {
+    -fx-text-fill: #667085;
+    -fx-font-size: 11.5px;
+    -fx-line-spacing: 2px;
+    -fx-wrap-text: true;
+}
+.dark .mod-card-summary {
+    -fx-text-fill: #98a2b3;
+}
+.mod-card-tags {
+    -fx-padding: 4 0 2 0;
+    -fx-min-height: 22;
+}
+.mod-card-stats {
+    -fx-padding: 4 0 0 0;
+    -fx-min-height: 20;
+}
+.mod-card-author,
+.mod-stat,
+.mod-detail-meta {
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 11px;
+}
+.dark .mod-card-author,
+.dark .mod-stat,
+.dark .mod-detail-meta {
+    -fx-text-fill: #8a97a8;
+}
+.mod-card-badge {
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+}
+.mod-detail-extra {
+    -fx-text-fill: #b54708;
+    -fx-font-size: 11px;
+    -fx-wrap-text: true;
+}
+.dark .mod-detail-extra {
+    -fx-text-fill: #fdba74;
+}
+
+/* 来源徽章 / 整合包徽章 / 加载器徽章 */
+.tag-source {
+    -fx-background-color: #eaf1fb;
+    -fx-border-color: #cfe0f5;
+    -fx-text-fill: #2b6cb0;
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+}
+.dark .tag-source {
+    -fx-background-color: #1b2a3d;
+    -fx-border-color: #2f4b6e;
+    -fx-text-fill: #8ab4f8;
+}
+.tag-modpack {
+    -fx-background-color: #f3eafb;
+    -fx-border-color: #e0cef5;
+    -fx-text-fill: #7b46b3;
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+}
+.dark .tag-modpack {
+    -fx-background-color: #2c1f3d;
+    -fx-border-color: #4b3270;
+    -fx-text-fill: #c9a5f0;
+}
+.dark .tag-loader-sm {
+    -fx-background-color: #1b2a3d;
+    -fx-border-color: #2f4b6e;
+    -fx-text-fill: #8ab4f8;
+}
+
+/* 0.9.1 r3：游戏管理页「版本」徽章 —— 与上面的加载器徽章（fabric / forge …）
+   同一规格的圆角胶囊：实底 + 1px 边框 + 高对比字色，深/浅主题都不退回灰色小字。
+   模组 / 整合包 / 材质包 / 光影 / 世界 五项统一走 versionTag()。 */
+.tag-version {
+    -fx-background-color: #eaf1fb;
+    -fx-border-color: #b9cdf0;
+    -fx-text-fill: #2b5cad;
+    /* 必须与 .tag-loader-sm 完全同尺寸：两枚胶囊在模组头部并排，
+       字号/padding 差一点就会一大一小、上下对不齐（0.9.1 r3 用户实测）。 */
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+}
+.dark .tag-version {
+    -fx-background-color: #1b2a3d;
+    -fx-border-color: #2f4b6e;
+    -fx-text-fill: #8ab4f8;
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+}
+
+.mod-section {
+    -fx-padding: 0 0 4 0;
+}
+.mod-section-title {
+    -fx-text-fill: #344054;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 0 2 0;
+}
+.dark .mod-section-title {
+    -fx-text-fill: #e9eef5;
+}
+.mod-version-head {
+    -fx-font-size: 13px;
+}
+.mod-tag-sep {
+    -fx-background-color: #d0d5dd;
+    -fx-min-width: 1;
+    -fx-pref-width: 1;
+    -fx-max-width: 1;
+    -fx-min-height: 18;
+    -fx-pref-height: 18;
+    -fx-max-height: 18;
+}
+.dark .mod-tag-sep {
+    -fx-background-color: #475467;
+}
+.mod-detail-stats {
+    -fx-padding: 2 0 0 0;
+}
+.mod-detail-status-bar {
+    -fx-padding: 6 0 0 0;
+    -fx-min-height: 34;
+}
+
+/* 版本行：固定 44 徽章 / 13px 版本号 / 11px 灰副行 / 底部 1px 分隔线 / 固定宽按钮 */
+.mod-version-badge {
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+    -fx-font-size: 10.5px;
+    -fx-padding: 3 2 3 2;
+}
+.mod-version-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #344054;
+}
+.dark .mod-version-name {
+    -fx-text-fill: #e9eef5;
+}
+.mod-version-row {
+    -fx-border-color: transparent transparent #e6eaf1 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+.dark .mod-version-row {
+    -fx-border-color: transparent transparent #2b3a4f transparent;
+}
+.mod-version-row .btn-download {
+    -fx-font-size: 11px;
+}
+.mod-group-head {
+    -fx-padding: 6 0 2 0;
+    -fx-alignment: center-left;
+}
+
+/* ==================================================== 0.8.8 Q4 / R-02：依赖卡片 + 加载器失败态
+   类名由 §7.3（W1 ↔ W2 契约）逐字定义，W1 在 ShellView 里 getStyleClass().add(...) 使用同名类；
+   本块只新增类，不改 .mod-deps / .mod-dep-row / .mod-dep-required / .mod-dep-ok / .mod-dep-warn /
+   .mod-group-title / .mod-group-head / .tag-* / .optifine-scope-hint 等既有定义。 */
+
+/* 依赖卡容器：与 .card 同款底（1px 描边 + 极淡投影，自包含、不依赖是否叠加 .card 类），
+   最小高度 64px（US-2② 断言），内部三段：图标 / 名称+副行 / 状态动作区。 */
+.dep-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: #ebeff5;
+    -fx-border-width: 1;
+    -fx-effect: null;
+    -fx-min-height: 64px;
+    -fx-padding: 8 12 8 8;
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
+}
+
+/* 图标容器：ImageView 48~64px，给个浅底圆角占位，封面没加载出来也不塌 */
+.dep-card-icon {
+    -fx-min-width: 56px;
+    -fx-min-height: 56px;
+    -fx-pref-width: 56px;
+    -fx-pref-height: 56px;
+    -fx-background-color: #f2f4f7;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #e6eaf1;
+    -fx-border-width: 1;
+    -fx-alignment: center;
+}
+
+/* 模组显示名：card-title 级字号（14px / bold / #101828） */
+.dep-card-name {
+    -fx-text-fill: #101828;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+}
+
+/* 分类标签 + 作者 / MC 版本副行：次级灰，比名称小一档 */
+.dep-card-meta {
+    -fx-text-fill: #667085;
+    -fx-font-size: 11.5px;
+    -fx-wrap-text: true;
+    -fx-padding: 2 0 0 0;
+}
+
+/* HMCL 风格：项目描述单行灰字（wrap/maxWidth 由 Java 侧控制，CSS 不设） */
+.dep-card-desc {
+    -fx-text-fill: #667085;
+    -fx-font-size: 12px;
+    -fx-padding: 1 0 0 0;
+}
+
+/* HMCL 风格：装饰/实用/管理那一排分类小标签的容器，chip 自身 .tag-cat 有样式 */
+.dep-card-tags {
+    -fx-alignment: center-left;
+}
+
+/* 状态 / 动作区容器：右侧「✓ 已安装」「安装」按钮的父盒子 */
+.dep-card-action {
+    -fx-alignment: center-right;
+    -fx-spacing: 6;
+    -fx-padding: 0 0 0 8;
+}
+
+/* 加载器卡内常驻错误文案：单卡失败不影响其他 4 张卡，红色可换行常驻 */
+.loader-card-error {
+    -fx-text-fill: #b42318;
+    -fx-font-size: 12.5px;
+    -fx-wrap-text: true;
+    -fx-background-color: #fef3f2;
+    -fx-background-radius: 8;
+    -fx-border-color: #fda29b;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 6 8 6 8;
+}
+
+/* 「重试」按钮：描边风格，别和实心绿的 .btn-download 抢视觉 */
+.loader-card-retry {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-border-color: #d0d5dd;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-text-fill: #475467;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 5 12 5 12;
+}
+.loader-card-retry:hover {
+    -fx-background-color: #f2f4f7;
+    -fx-border-color: #98a2b3;
+}
+
+/* ------------------------------------------------------- 深色主题 */
+.dark .dep-card {
+    -fx-background-color: #171d26;
+    -fx-border-color: #262d38;
+    -fx-effect: null;
+}
+.dark .dep-card-icon {
+    -fx-background-color: #232a34;
+    -fx-border-color: #2b3a4f;
+}
+.dark .dep-card-name {
+    -fx-text-fill: #e9eef5;
+}
+.dark .dep-card-meta {
+    -fx-text-fill: #9aa7b8;
+}
+.dark .dep-card-desc {
+    -fx-text-fill: #9aa7b8;
+}
+.dark .loader-card-error {
+    -fx-text-fill: #f97066;
+    -fx-background-color: #3a1d1b;
+    -fx-border-color: #7f1d1d;
+}
+.dark .loader-card-retry {
+    -fx-background-color: #1b2433;
+    -fx-border-color: #2b3a4f;
+    -fx-text-fill: #c3cdd9;
+}
+.dark .loader-card-retry:hover {
+    -fx-background-color: #243042;
+    -fx-border-color: #3a4d66;
+}
+
+/* ================================================================== 0.9.4 r2：滚动条改照 HMCL 观感
+ * 参考 HMCL-dev/HMCL root.css L17-21 / L1820-1891 + FloatScrollBarSkin.java：
+ *   HMCL 给 ScrollPane/ListView/ComboBox/TableView/TreeView 换 FloatScrollBarSkin ——
+ *   轨道 transparent、thumb 6px 半透明主题色、静止 opacity 0.5→hover/pressed 1.0、
+ *   无 increment/decrement 按钮、无阴影无渐变、无实底槽。
+ * GBL 是原生 modena ScrollBar，故把该观感翻译成 modena 方言：透明轨道 + 6px 半透明细胶囊 +
+ * hover 靠 alpha 加深 + 箭头尺寸归零。r1 的实底灰槽、10px 不透明粗条、品牌绿进度条全部撤掉。
+ * 约束：不触碰 .skin-scroll .viewport，不写 .scroll-bar .viewport 兜底（无效选择器）。
+ * ================================================================== */
+
+/* -------------------------------- 浅色 -------------------------------- */
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+.scroll-bar:vertical   { -fx-pref-width: 10px; }
+.scroll-bar:horizontal { -fx-pref-height: 10px; }
+.scroll-bar > .track,
+.scroll-bar .track,
+.scroll-bar .track-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
+}
+.scroll-bar > .thumb,
+.scroll-bar .thumb {
+    -fx-background-color: rgba(71, 85, 105, 0.28);
+    -fx-background-radius: 999;
+    -fx-background-insets: 0 2 0 2;
+}
+.scroll-bar:horizontal > .thumb,
+.scroll-bar:horizontal .thumb { -fx-background-insets: 2 0 2 0; }
+.scroll-bar .thumb:hover   { -fx-background-color: rgba(71, 85, 105, 0.50); }
+.scroll-bar .thumb:pressed { -fx-background-color: rgba(71, 85, 105, 0.66); }
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+}
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-shape: "";
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+}
+/* 原生 ProgressBar 兜底：Java 侧当前无实例化，按 HMCL 中性口径保留（圆角 2、insets 0、无品牌绿） */
+.progress-bar            { -fx-pref-height: 8px; -fx-background-color: transparent; }
+.progress-bar > .track   { -fx-background-color: rgba(71,85,105,0.12); -fx-background-radius: 2; -fx-background-insets: 0; }
+.progress-bar > .bar     { -fx-background-color: rgba(71,85,105,0.55); -fx-background-radius: 2; -fx-background-insets: 0; -fx-padding: 0; }
+
+/* -------------------------------- 深色（与浅色逐条成对） -------------------------------- */
+.dark .scroll-bar { -fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 0; }
+.dark .scroll-bar:vertical   { -fx-pref-width: 10px; }
+.dark .scroll-bar:horizontal { -fx-pref-height: 10px; }
+.dark .scroll-bar > .track,
+.dark .scroll-bar .track,
+.dark .scroll-bar .track-background {
+    -fx-background-color: transparent; -fx-border-color: transparent; -fx-background-insets: 0;
+}
+.dark .scroll-bar > .thumb,
+.dark .scroll-bar .thumb {
+    -fx-background-color: rgba(203, 213, 225, 0.26);
+    -fx-background-radius: 999;
+    -fx-background-insets: 0 2 0 2;
+}
+.dark .scroll-bar:horizontal > .thumb,
+.dark .scroll-bar:horizontal .thumb { -fx-background-insets: 2 0 2 0; }
+.dark .scroll-bar .thumb:hover   { -fx-background-color: rgba(203, 213, 225, 0.46); }
+.dark .scroll-bar .thumb:pressed { -fx-background-color: rgba(203, 213, 225, 0.60); }
+.dark .scroll-bar .increment-button,
+.dark .scroll-bar .decrement-button {
+    -fx-background-color: transparent; -fx-padding: 0; -fx-pref-width: 0; -fx-pref-height: 0;
+}
+.dark .scroll-bar .increment-arrow,
+.dark .scroll-bar .decrement-arrow {
+    -fx-shape: ""; -fx-background-color: transparent; -fx-padding: 0; -fx-pref-width: 0; -fx-pref-height: 0;
+}
+.dark .progress-bar > .track { -fx-background-color: rgba(203,213,225,0.14); }
+.dark .progress-bar > .bar   { -fx-background-color: rgba(203,213,225,0.55); }
+
+/* ---------------------------------------- 改动 4：启动页底部操作条 ----------------------------------------
+   配合 ShellView.buildHero() 新增的 HBox：左端版本号 + 右端两按钮，中间 filler 顶开。
+   只排布局，不带任何颜色，浅/深两套齐全（深色与浅色同值，仅占位成对）。 */
+
+.hero-actionbar {
+    -fx-padding: 8 0 0 0;
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
+}
+
+.dark .hero-actionbar {
+    -fx-padding: 8 0 0 0;
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
+}
+
+/* ---------------------------------------- 改动 5：0.9.4 r2 启动页去大框 ----------------------------------------
+   大框来自 buildHero() 给 hero 挂的 "card hero" 两个类：.card 白底+1px 描边+投影、
+   .hero 更散的投影，且 hero 被 VBox.setVgrow(ALWAYS) 撑满整页。
+   .card 是全项目通用卡片类（infoCard / user-card / stat-card / dlg-card 共用），
+   绝不能改 .card 本身；这里用 .hero.card 在文件末尾单独覆盖，浅/深同时生效。
+   不动 .hero-title 的 40px 字号与 #101828 / #e9eef5 颜色（构建与快照门禁）。 */
+.hero.card,
+.dark .hero.card {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-radius: 0;
+    -fx-effect: null;
+}
+
+/* ---------------------------------------- 0.9.5 r1：自动更新 UI（UpdateController.UpdateUi） ----------------------------------------
+   居中白卡对话框（.update-dialog，沿用 .card 白底/圆角/描边，这里收最大宽度 + 略强投影让它在遮罩上更立）、
+   右上角深色提示条（.update-tip）、进度条（.update-progress，跟随品牌绿）。浅/深两套齐全。 */
+
+/* 中央白卡：继承 .card 的白底/圆角/描边，这里限定最大宽度并给一层稍重的投影使其浮在遮罩上 */
+.update-dialog {
+    -fx-max-width: 420;
+    -fx-pref-width: 420;
+    -fx-effect: dropshadow(one-pass-box, #0b1a2b59, 28, 0.0, 0, 6);
+}
+
+/* 进度条：轨道浅灰、已填充段用品牌绿渐变（跟随 .btn-play） */
+.update-progress {
+    -fx-accent: #2f9a56;
+    -fx-background-color: #eef2f7;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-pref-height: 8;
+}
+.update-progress > .bar {
+    -fx-background-color: linear-gradient(to bottom, #3cb46b, #2f9a56);
+    -fx-background-radius: 6;
+    -fx-background-insets: 1;
+}
+.update-progress > .track {
+    -fx-background-color: #eef2f7;
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+}
+.dark .update-progress {
+    -fx-background-color: #26313d;
+}
+.dark .update-progress > .track {
+    -fx-background-color: #26313d;
+}
+
+/* 0.9.8：「发现更新」提示条从右上角浮层改为状态栏左侧内联小胶囊。
+   老样式是 322×46 深蓝浮层 + 投影，正好盖住标题栏最小化/最大化/关闭三颗按钮并截获点击，
+   用户明确要求「移到不挡操作的位置」。现在它只有 28px 高，跟右下角版本号同处状态栏两端。 */
+.update-tip {
+    -fx-background-color: #e7f6ec;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-border-color: #bfe6cd;
+    -fx-border-width: 1;
+    -fx-padding: 2 6 2 10;
+    -fx-spacing: 7;
+    -fx-alignment: center-left;
+    -fx-cursor: hand;
+}
+.update-tip-inline {
+    -fx-max-height: 28;
+    -fx-min-height: 28;
+}
+.update-tip Label {
+    -fx-text-fill: #237a44;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: 600;
+}
+.update-tip-dot {
+    -fx-background-color: #37a85a;
+    -fx-background-radius: 999;
+}
+.update-tip:hover {
+    -fx-background-color: #d8f0e1;
+}
+.dark .update-tip {
+    -fx-background-color: #17351f;
+    -fx-border-color: #2c5c3c;
+}
+.dark .update-tip Label {
+    -fx-text-fill: #7ee2a0;
+}
+.dark .update-tip:hover {
+    -fx-background-color: #1d452a;
+}
+.dark .update-tip-dot {
+    -fx-background-color: #7ee2a0;
+}
+
+/* 启动页底部操作条：确保 .btn-play / .btn-ghost 等宽铺满（Java 已设 maxWidth=∞，这里兜底） */
+.hero-actionbar .btn-play,
+.hero-actionbar .btn-ghost {
+    -fx-max-width: 100000;
+}
+
+/* 0.9.6 r5：字号回归 0.9.5 的 .btn-play 14px，不再等比放大（配合 220×54 按钮与 16px 图标） */
+
+/* ---------------------------------------- 0.9.6 r4：启动页两颗按钮精修 ----------------------------------------
+   全部为 hero 限定选择器，浅/深两套成对，不新增节点、不改结构，也不误伤其它 .btn-play / .btn-ghost。 */
+
+/* ① 两颗等内距等圆角：顺带用 (0,3,0) 压过 .dark .button (0,2,0) 把深色 ghost 圆角反杀成 8 的旧问题 */
+.btn-ghost.hero-open-dir { -fx-padding: 0 28 0 28; -fx-background-radius: 14; -fx-border-radius: 14; }
+.dark .btn-ghost.hero-open-dir { -fx-background-radius: 14; -fx-border-radius: 14; }
+
+/* ② 悬停微动 + 补浅/深两套都缺的 :pressed */
+.hero-actionbar .btn-play:hover, .hero-actionbar .btn-ghost:hover { -fx-translate-y: -1px; }
+.hero-actionbar .btn-play:pressed, .hero-actionbar .btn-ghost:pressed { -fx-translate-y: 0px; }
+.btn-ghost.hero-open-dir:pressed { -fx-background-color: #f2f5f9; -fx-border-color: #c9d2de; }
+.dark .btn-ghost.hero-open-dir:pressed { -fx-background-color: #232b36; -fx-border-color: #4a5666; }
+
+/* ③ 版本号/说明排版留白（严禁改 .hero-title 的 40px 字号与 #101828 / #e9eef5 颜色） */
+.hero-desc { -fx-line-spacing: 2px; -fx-padding: 2 0 0 0; -fx-letter-spacing: 0.2px; }
+.dark .hero-desc { -fx-line-spacing: 2px; -fx-padding: 2 0 0 0; -fx-letter-spacing: 0.2px; }
+.hero-title { -fx-padding: 0 0 2 0; }
+.dark .hero-title { -fx-padding: 0 0 2 0; }
+
+/* ④ 主按钮 1px 半透明内高光 + ghost 描边加深一档 */
+.btn-play.hero-play { -fx-border-color: rgba(255,255,255,0.22); -fx-border-width: 1; -fx-border-radius: 14; }
+.dark .btn-play.hero-play { -fx-border-color: rgba(255,255,255,0.14); -fx-border-width: 1; -fx-border-radius: 14; }
+.btn-ghost.hero-open-dir { -fx-border-color: #d7dfe9; }
+.dark .btn-ghost.hero-open-dir { -fx-border-color: #3a4553; }
+
+/* ================================================================ 0.9.9 r11：长列表滚动条可抓握尺寸
+ * 模组 / 整合包 / 资源包 / 世界 / 光影页内容条目上千，0.9.4 r2 的 HMCL 观感把 thumb 做成
+ * 6px 且没有最小长度，条目一多滑块就缩成一个小点，看着像「滚动条没了」。
+ * 这里只放大 content-scroll（游戏管理五页、详情弹窗等长列表），不动别的控件：
+ * 12px 轨道 / 10px 滑块 / 至少 40px 长 / 悬停加深，浅色深色成对。
+ * 放在文件末尾，确保优先级高于前面 0.9.4 r2 的全局 .scroll-bar 规则。
+ * ================================================================ */
+.content-scroll > .scroll-bar:vertical,
+.dark .content-scroll > .scroll-bar:vertical { -fx-pref-width: 12px; }
+.content-scroll > .scroll-bar:horizontal,
+.dark .content-scroll > .scroll-bar:horizontal { -fx-pref-height: 12px; }
+.content-scroll > .scroll-bar:vertical .thumb,
+.content-scroll > .scroll-bar:vertical > .thumb {
+    -fx-background-insets: 0 1 0 1;
+    -fx-min-height: 40px;
+}
+.dark .content-scroll > .scroll-bar:vertical .thumb,
+.dark .content-scroll > .scroll-bar:vertical > .thumb {
+    -fx-background-insets: 0 1 0 1;
+    -fx-min-height: 40px;
+}
+.content-scroll > .scroll-bar:horizontal .thumb,
+.content-scroll > .scroll-bar:horizontal > .thumb {
+    -fx-background-insets: 1 0 1 0;
+    -fx-min-width: 40px;
+}
+.dark .content-scroll > .scroll-bar:horizontal .thumb,
+.dark .content-scroll > .scroll-bar:horizontal > .thumb {
+    -fx-background-insets: 1 0 1 0;
+    -fx-min-width: 40px;
+}
+.content-scroll > .scroll-bar:vertical .thumb:hover,
+.dark .content-scroll > .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(71, 85, 105, 0.62);
+}
+.dark .content-scroll > .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(203, 213, 225, 0.66);
+}
+
+/* ================================================================ 0.9.9 r12：详情弹窗滚动条统一加粗
+ * r11 只给 .content-scroll 加了 12px 轨道 / 10px 滑块 / 40px 最小长度，
+ * 但详情弹窗内部的依赖区 / 版本列表 / 弹窗外层不都走这条匹配链，仍吃 r2 的
+ * 全局 6px 视觉细条（10px 轨道 - insets 0 2 0 2）且没有最小长度，条目一多就
+ * 缩成小短横。这里用一条全局 .scroll-bar 规则盖住所有滚动区（浅 / 深成对），
+ * 放在文件末尾确保优先级高于 r2 与 r11 的局部规则：
+ * 12px 轨道 / 视觉 10px 滑块 / 最小 40px 长 / 悬停加深。不改卡片尺寸与布局。
+ * ================================================================ */
+.scroll-bar:vertical,
+.dark .scroll-bar:vertical { -fx-pref-width: 12px; }
+.scroll-bar:horizontal,
+.dark .scroll-bar:horizontal { -fx-pref-height: 12px; }
+.scroll-bar > .thumb,
+.scroll-bar .thumb,
+.dark .scroll-bar > .thumb,
+.dark .scroll-bar .thumb { -fx-background-insets: 0 1 0 1; }
+.scroll-bar:horizontal > .thumb,
+.scroll-bar:horizontal .thumb,
+.dark .scroll-bar:horizontal > .thumb,
+.dark .scroll-bar:horizontal .thumb { -fx-background-insets: 1 0 1 0; }
+.scroll-bar:vertical .thumb,
+.scroll-bar:vertical > .thumb,
+.dark .scroll-bar:vertical .thumb,
+.dark .scroll-bar:vertical > .thumb { -fx-min-height: 40px; }
+.scroll-bar:horizontal .thumb,
+.scroll-bar:horizontal > .thumb,
+.dark .scroll-bar:horizontal .thumb,
+.dark .scroll-bar:horizontal > .thumb { -fx-min-width: 40px; }
+
+
+/* ================================================================ 0.9.9 r13：浮动滚动条 skin + 下载队列重设计
+ * 滚动条：r11/r12 的纯 CSS 最小长度改不动原生 skin 内部按 visibleAmount 算出的 thumb 尺寸
+ * （1228 项时只有十几像素）。Java 侧 FloatScrollBarSkin 在 layoutChildren 后强制 clamp 到
+ * 48px / 12px；这里只把 thumb 的对比度提到 0.55+、厚度吃满 12px（insets 归零），
+ * 浅深成对。历史规则全部保留，本段放末尾确保优先级最高。
+ * 下载队列：轨道吃满剩余宽、条高 8px；百分比入条尾；不确定态脉动；标题 / 副信息分层。
+ * ================================================================ */
+/* 1.0.1 修复：最小长度必须【按滚动方向】设。
+ * 旧写法对 .thumb 同时设 min-width:48 和 min-height:48，导致垂直滚动条的滑块
+ * 被撑成 48×48（轨道只有 12px 宽）→ 横向溢出成"横线"，且渲染高度 48 与原生 skin
+ * 按 prefHeight 算出的 layoutY 不一致 → 滚到底时滑块越出轨道、穿过容器边界。
+ * 现在垂直条只设 min-height、水平条只设 min-width，厚度交给 skin 固定 12px。 */
+.scroll-bar:vertical > .thumb,
+.scroll-bar:vertical .thumb,
+.dark .scroll-bar:vertical > .thumb,
+.dark .scroll-bar:vertical .thumb {
+    -fx-background-insets: 0;
+    -fx-min-height: 48px;
+}
+.scroll-bar:horizontal > .thumb,
+.scroll-bar:horizontal .thumb,
+.dark .scroll-bar:horizontal > .thumb,
+.dark .scroll-bar:horizontal .thumb {
+    -fx-background-insets: 0;
+    -fx-min-width: 48px;
+}
+.scroll-bar > .thumb,
+.scroll-bar .thumb { -fx-background-color: rgba(71, 85, 105, 0.62); }
+.dark .scroll-bar > .thumb,
+.dark .scroll-bar .thumb { -fx-background-color: rgba(203, 213, 225, 0.58); }
+
+.queue-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #101828;
+}
+.dark .queue-name { -fx-text-fill: #e4e7ec; }
+.queue-sub {
+    -fx-font-size: 11.5px;
+    -fx-text-fill: #667085;
+}
+.dark .queue-sub { -fx-text-fill: #98a2b3; }
+.queue-bar {
+    -fx-background-color: #eaecf0;
+    -fx-background-radius: 999;
+    -fx-min-height: 8px;
+    -fx-pref-height: 8px;
+    -fx-max-height: 8px;
+}
+.dark .queue-bar { -fx-background-color: #2b3440; }
+.queue-pct {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #344054;
+    -fx-padding: 0 6 0 0;
+}
+.dark .queue-pct { -fx-text-fill: #e4e7ec; }
+.queue-bar-indet {
+    -fx-background-color: #6cc98a;
+    -fx-opacity: 0.85;
+    -fx-background-radius: 999;
+}
+.dark .queue-bar-indet { -fx-background-color: #8fe0a8; }
+.queue-row { -fx-min-height: 64; }
+/* ===== 1.1.5 作用域样式：只影响日志折叠面板与多人联机页，绝不改全局 .card / .chip / .frame ===== */
+/* 折叠面板：深色标题条 + 自绘箭头 + 12px 圆角；动画由 GblTitledPaneSkin 驱动，CSS 只管外观。 */
+.gbl-disclosure {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #ebeff5;
+    -fx-border-width: 1;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+}
+.dark .gbl-disclosure {
+    -fx-background-color: #171d26;
+    -fx-border-color: #2f3946;
+}
+.gbl-disclosure > .gbl-disclosure-title {
+    -fx-background-color: #f7f9fc;
+    -fx-background-radius: 12 12 0 0;
+    -fx-padding: 10 14 10 14;
+    -fx-alignment: center-left;
+    -fx-cursor: hand;
+}
+.dark .gbl-disclosure > .gbl-disclosure-title {
+    -fx-background-color: #1c232d;
+}
+.gbl-disclosure > .gbl-disclosure-title:hover {
+    -fx-background-color: #eef2f7;
+}
+.dark .gbl-disclosure > .gbl-disclosure-title:hover {
+    -fx-background-color: #232a34;
+}
+.gbl-disclosure .gbl-disclosure-title-text {
+    -fx-text-fill: #101828;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+.dark .gbl-disclosure .gbl-disclosure-title-text {
+    -fx-text-fill: #e9eef5;
+}
+.gbl-disclosure .gbl-disclosure-arrow {
+    -fx-fill: transparent;
+    -fx-stroke: #667085;
+    -fx-stroke-width: 1.6;
+    -fx-scale-x: 1.5;
+    -fx-scale-y: 1.5;
+}
+.dark .gbl-disclosure .gbl-disclosure-arrow {
+    -fx-stroke: #7ee2a0;
+}
+.gbl-disclosure .gbl-disclosure-arrow:hover {
+    -fx-stroke: #237a44;
+}
+.dark .gbl-disclosure .gbl-disclosure-arrow:hover {
+    -fx-stroke: #7ee2a0;
+}
+.gbl-disclosure .gbl-disclosure-content {
+    -fx-background-color: transparent;
+}
+
+/* 联机页紧凑布局：只挂 .gbl-compact 的根 VBox，不动其它页面的 .card。
+   1.1.7 骨架级重写：照 HMCL ComponentList —— 分组卡(淡阴影+小圆角) + 行(padding 10 16, 1px 分隔线)。 */
+.gbl-compact {
+    -fx-padding: 10;
+    -fx-spacing: 10;
+}
+/* 1.2.5 D Round 2：遮罩宿主必须铺满 BorderPane center。
+   基础 .gbl-compact 的 10px padding 会作用在 StackPane 宿主本身，单改子遮罩 padding:0 无效；
+   这里用同元素双类选择器（优先级高于 .gbl-compact）在基础规则之后把宿主 padding/spacing 归零。 */
+.gbl-compact.mp-overlay-host,
+.gbl-compact.gbl-modal-host {
+    -fx-padding: 0;
+    -fx-spacing: 0;
+}
+
+/* 分组卡：一组行共用一个淡阴影与 6px 圆角，无内层 padding（行自己给）。 */
+.gbl-compact .gbl-list {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 6;
+    -fx-border-color: #ebeff5;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(16,24,40,0.10), 5, 0.06, -0.5, 1);
+    -fx-padding: 0;
+}
+.dark .gbl-compact .gbl-list {
+    -fx-background-color: #171d26;
+    -fx-border-color: #262d38;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.30), 5, 0.10, -0.5, 1);
+}
+
+/* 组内一行：左右 16、上下 10，最小高 48；行间 1px 分隔线。 */
+.gbl-compact .gbl-list-row {
+    -fx-padding: 10 16 10 16;
+    -fx-min-height: 48;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #ebeff5 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.dark .gbl-compact .gbl-list-row {
+    -fx-border-color: transparent transparent #262d38 transparent;
+}
+/* 组内最后一行不画分隔线。 */
+.gbl-compact .gbl-list-row:last-child {
+    -fx-border-width: 0;
+}
+/* 日志折叠面板作为组C最后一行：融入分组卡，去自身底色/描边与下圆角。 */
+.gbl-compact .gbl-list > .gbl-disclosure {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 0 0 5 5;
+    -fx-border-radius: 0 0 5 5;
+}
+
+/* 分组标题：12px 字，仅上方留 8px（HMCL createComponentListTitle）。 */
+.gbl-compact .gbl-group-title {
+    -fx-text-fill: #667085;
+    -fx-font-size: 12px;
+}
+.dark .gbl-compact .gbl-group-title {
+    -fx-text-fill: #98a2b3;
+}
+
+/* 组内行标题：轻于旧 card-title，贴近 HMCL 设置行标题。 */
+.gbl-compact .gbl-row-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+}
+.dark .gbl-compact .gbl-row-title {
+    -fx-text-fill: #e9eef5;
+}
+
+/* 邀请码：Terracotta 式 24px 大号、居中、只读、点击可复制。 */
+.gbl-compact .gbl-invite-code {
+    -fx-font-size: 24px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #101828;
+    -fx-background-color: transparent;
+    -fx-control-inner-background: transparent;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 6 0 6 0;
+    -fx-cursor: hand;
+}
+.dark .gbl-compact .gbl-invite-code {
+    -fx-text-fill: #e9eef5;
+}
+
+/* 身份行：图标固定占位；标题/来源给最小宽度，避免塌成单字符。 */
+.gbl-compact .gbl-identity-icon {
+    -fx-fill: #237a44;
+}
+.dark .gbl-compact .gbl-identity-icon {
+    -fx-fill: #7ee2a0;
+}
+.gbl-compact .gbl-identity-name {
+    -fx-min-width: 72;
+    -fx-text-overrun: ellipsis;
+}
+.gbl-compact .gbl-identity-source {
+    -fx-min-width: 72;
+}
+
+/* 体检两行式：值跟标题走，不用弹性间隔把值推到最右。 */
+.gbl-compact .gbl-probe-line {
+    -fx-min-height: 48;
+}
+.gbl-compact .gbl-probe-value {
+    -fx-text-fill: #101828;
+}
+.dark .gbl-compact .gbl-probe-value {
+    -fx-text-fill: #e9eef5;
+}
+.gbl-probe-dot {
+    -fx-background-radius: 999;
+    -fx-background-color: #667085;
+}
+.gbl-probe-dot.gbl-probe-good    { -fx-background-color: #237a44; }
+.gbl-probe-dot.gbl-probe-warn    { -fx-background-color: #b45309; }
+.gbl-probe-dot.gbl-probe-bad     { -fx-background-color: #b42318; }
+.gbl-probe-dot.gbl-probe-unknown { -fx-background-color: #667085; }
+.dark .gbl-probe-dot.gbl-probe-good    { -fx-background-color: #7ee2a0; }
+.dark .gbl-probe-dot.gbl-probe-warn    { -fx-background-color: #f0b45e; }
+.dark .gbl-probe-dot.gbl-probe-bad     { -fx-background-color: #f5a3a0; }
+.dark .gbl-probe-dot.gbl-probe-unknown { -fx-background-color: #a7b2c0; }
+
+/* ============ 1.2 多人联机页：只借 Terracotta 排版，视觉回归 GBL 原生 ============
+ * 浅色/深色卡片统一走 .card；背景由主窗口外壳提供，页内不再有 MC 风景图、
+ * 毛玻璃样式全部移除、也不再画第二层侧栏。所有规则限定 .gbl-compact 后代。
+ */
+.gbl-compact.mp-root {
+    -fx-background-color: transparent;
+    -fx-background-image: null;
+}
+.gbl-compact .mp-scene {
+    -fx-background-color: transparent;
+    -fx-background-image: null;
+}
+.gbl-compact .mp-content {
+    -fx-background-color: transparent;
+}
+.gbl-compact .mp-content-scroll,
+.gbl-compact .mp-content-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.gbl-compact .mp-content-scroll > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+/* 主卡：直接复用 .card 的白底 / 描边 / 圆角，深浅主题由 .dark .card 统一提供。 */
+.gbl-compact .mp-engine { -fx-padding: 10 16 10 16; }
+.gbl-compact .mp-engine-text {
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #101828;
+}
+.gbl-compact .mp-engine-ready { -fx-text-fill: #237a44; }
+.gbl-compact .mp-engine-loading { -fx-text-fill: #667085; }
+.dark .gbl-compact .mp-engine-text { -fx-text-fill: #eef2f8; }
+.dark .gbl-compact .mp-engine-ready { -fx-text-fill: #6fd18f; }
+.dark .gbl-compact .mp-engine-loading { -fx-text-fill: #98a2b3; }
+.gbl-compact .mp-engine-bar .track {
+    -fx-background-color: #eef1f5;
+    -fx-background-radius: 999;
+}
+.gbl-compact .mp-engine-bar .bar {
+    -fx-background-color: #37a85a;
+    -fx-background-radius: 999;
+}
+.dark .gbl-compact .mp-engine-bar .track { -fx-background-color: #2a3340; }
+.dark .gbl-compact .mp-engine-bar .bar { -fx-background-color: #4fbd72; }
+
+/* 1.2.3 卡顶常驻就绪条：浅色浅灰底 + 深字 / 深色深卡底 + 浅字，双主题成对，绝不串色。 */
+.gbl-compact .mp-engine-strip {
+    -fx-padding: 10 16 8 16;
+    -fx-spacing: 6;
+    -fx-background-color: #f7f9fc;
+    -fx-border-color: transparent transparent #e5e9f0 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.dark .gbl-compact .mp-engine-strip {
+    -fx-background-color: #1c2430;
+    -fx-border-color: transparent transparent #2f3743 transparent;
+}
+
+.gbl-compact .mp-divider { -fx-background-color: #e5e9f0; }
+.dark .gbl-compact .mp-divider { -fx-background-color: #2f3743; }
+.gbl-compact .mp-desc-wrap { -fx-padding: 10 16 10 16; }
+.gbl-compact .mp-desc {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: #475467;
+}
+.dark .gbl-compact .mp-desc { -fx-text-fill: #c7cfda; }
+
+/* 两大宽行：GBL 列表行观感，整行 hover 给极淡底色，不再有紫色图标/箭头。 */
+.gbl-compact .mp-big-rows { -fx-padding: 2 0 2 0; }
+.gbl-compact .mp-big-row {
+    -fx-padding: 10 16 10 16;
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+}
+.gbl-compact .mp-big-holder:hover > .mp-big-row { -fx-background-color: #f7f9fc; }
+.dark .gbl-compact .mp-big-holder:hover > .mp-big-row { -fx-background-color: #212936; }
+.gbl-compact .mp-big-icon { -fx-fill: #37a85a; }
+.gbl-compact .mp-big-title { -fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: #101828; }
+.gbl-compact .mp-big-sub { -fx-font-size: 12px; -fx-text-fill: #344054; }
+.gbl-compact .mp-big-arrow { -fx-fill: #37a85a; }
+.dark .gbl-compact .mp-big-icon { -fx-fill: #6fd18f; }
+.dark .gbl-compact .mp-big-arrow { -fx-fill: #6fd18f; }
+.gbl-compact .mp-row-hit,
+.gbl-compact .mp-side-hit {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+.gbl-compact .mp-row-hit:focused,
+.gbl-compact .mp-side-hit:focused,
+.gbl-compact .mp-row-hit:hover,
+.gbl-compact .mp-side-hit:hover,
+.gbl-compact .mp-row-hit:pressed,
+.gbl-compact .mp-side-hit:pressed {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+}
+
+/* 状态区：邀请码 / 加入输入 / 操作按钮，全部 GBL 原生控件。 */
+.gbl-compact .mp-status-box { -fx-padding: 10 16 10 16; }
+.gbl-compact .mp-idle-box { -fx-padding: 14 16 14 16; }
+.gbl-compact .mp-idle-buttons { -fx-spacing: 10; }
+.gbl-compact .mp-idle-buttons .btn-download { -fx-max-width: 220; }
+.gbl-compact .mp-busy-box { -fx-padding: 10 16 10 16; }
+.gbl-compact .mp-busy-line { -fx-spacing: 10; }
+.gbl-compact .mp-busy-line .btn-ghost { -fx-min-width: 72; }
+.gbl-compact .mp-done-box { -fx-padding: 10 16 10 16; }
+.gbl-compact .mp-invite-modal-input { -fx-pref-width: 360; }
+.gbl-compact .mp-lan-hint { -fx-font-size: 11.5px; -fx-text-fill: #667085; }
+.dark .gbl-compact .mp-lan-hint { -fx-text-fill: #98a2b3; }
+.gbl-compact .mp-join-card {
+    -fx-background-color: #f7f9fc;
+    -fx-border-color: #ebeff5;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 12;
+}
+.dark .gbl-compact .mp-join-card {
+    -fx-background-color: #1c232e;
+    -fx-border-color: #2a3340;
+}
+.gbl-compact .mp-invite { -fx-max-width: 420; }
+
+/* 次级卡片/体检/日志字段保留编译无妨，但页面不挂载；样式同样走 GBL 原生。 */
+.gbl-compact .mp-sub-head { -fx-padding: 10 16 10 16; }
+.gbl-compact .mp-sub-title { -fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #101828; }
+.dark .gbl-compact .mp-sub-title { -fx-text-fill: #eef2f8; }
+.gbl-compact .mp-sub-body { -fx-padding: 10 16 10 16; }
+.gbl-compact .mp-probe-line { -fx-padding: 6 0 6 0; }
+.gbl-compact .mp-probe-label { -fx-font-size: 12px; -fx-text-fill: #344054; }
+.dark .gbl-compact .mp-probe-label { -fx-text-fill: #c7cfda; }
+.gbl-compact .mp-probe-value { -fx-font-size: 11.5px; }
+.gbl-compact .mp-relay-note { -fx-padding: 8 16 0 16; }
+.gbl-compact .mp-log-pane,
+.dark .gbl-compact .mp-log-pane { -fx-background-color: transparent; }
+.gbl-compact .mp-log-area { -fx-font-size: 11px; }
+
+/* 「您似乎忘记启动游戏了」：GBL 原生居中白卡 + 半透明遮罩，不再左上角乱叠。 */
+/* 1.2.5 D：遮罩本身不设 inset/margin/padding，四边与操作区严格重合；卡片靠 StackPane 居中。 */
+.gbl-compact .mp-modal-layer {
+    -fx-background-color: rgba(16, 24, 40, 0.45);
+    -fx-padding: 0;
+}
+.dark .gbl-compact .mp-modal-layer {
+    -fx-background-color: rgba(3, 7, 18, 0.62);
+    -fx-padding: 0;
+}
+/* 1.2.6：弹窗宽度收窄（游戏检查 400 / 邀请码 440），高度完全由内容撑开；不写 min-width 撑大，也不写固定 max-height。 */
+.gbl-compact .mp-modal-card {
+    -fx-max-width: 400;
+    -fx-padding: 20;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e5e9f0;
+    -fx-border-width: 1;
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(three-pass-box, #0b1a2b33, 18, 0.0, 0, 6);
+}
+/* 1.2.5 C：GBL 原生碳灰卡（.dark .card = #171d26），绝不引入蓝灰旧值。 */
+.dark .gbl-compact .mp-modal-card {
+    -fx-background-color: #171d26;
+    -fx-border-color: #262d38;
+    -fx-effect: dropshadow(three-pass-box, #00000099, 18, 0.0, 0, 6);
+}
+/* 邀请码模态比游戏检查模态多一行输入框：只放宽宽度，高度仍由内容决定。 */
+.gbl-compact .mp-invite-modal { -fx-max-width: 440; }
+.dark .gbl-compact .mp-invite-modal { -fx-max-width: 440; }
+/* 1.2.4 HMCL 按钮条：底部右对齐、112x36、间距 12、字号 14（双主题成对）。 */
+.gbl-compact .mp-modal-actions {
+    -fx-spacing: 12;
+    -fx-alignment: center-right;
+    -fx-padding: 8 0 0 0;
+}
+.dark .gbl-compact .mp-modal-actions {
+    -fx-spacing: 12;
+    -fx-alignment: center-right;
+    -fx-padding: 8 0 0 0;
+}
+.gbl-compact .mp-modal-btn {
+    -fx-min-width: 112;
+    -fx-min-height: 36;
+    -fx-font-size: 14px;
+}
+.dark .gbl-compact .mp-modal-btn {
+    -fx-min-width: 112;
+    -fx-min-height: 36;
+    -fx-font-size: 14px;
+}
+/* 1.2.5 B/C：末条生效规则再钉一次 112（浅/深成对），杜绝后置同选择器 96 覆盖（1.2.4 教训）。 */
+.gbl-compact .mp-modal-btn,
+.dark .gbl-compact .mp-modal-btn {
+    -fx-min-width: 112;
+    -fx-min-height: 36;
+}
+.gbl-compact .mp-modal-icon {
+    -fx-min-width: 36;
+    -fx-min-height: 36;
+    -fx-max-width: 36;
+    -fx-max-height: 36;
+    -fx-alignment: center;
+    -fx-background-color: #e7f6ec;
+    -fx-background-radius: 18;
+    -fx-text-fill: #237a44;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+.dark .gbl-compact .mp-modal-icon {
+    -fx-background-color: #1e3a2b;
+    -fx-text-fill: #6fd18f;
+}
+.gbl-compact .mp-modal-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #101828;
+}
+.gbl-compact .mp-modal-sub { -fx-font-size: 13px; -fx-text-fill: #667085; }
+.dark .gbl-compact .mp-modal-title { -fx-text-fill: #eef2f8; }
+.dark .gbl-compact .mp-modal-sub { -fx-text-fill: #98a2b3; }
+
+/* 1.2.4 联机忙态遮罩：只盖操作区，卡片居中；取消是唯一出口。 */
+/* 1.2.5 D：忙态遮罩铺满操作区，无 padding/inset；卡片仍居中。 */
+.gbl-compact .mp-busy-overlay {
+    -fx-background-color: rgba(16, 24, 40, 0.45);
+    -fx-padding: 0;
+}
+.dark .gbl-compact .mp-busy-overlay {
+    -fx-background-color: rgba(3, 7, 18, 0.68);
+    -fx-padding: 0;
+}
+/* 1.2.6 忙态卡：横向一行（状态 + 秒数 + 取消），高度由内容撑开，宽 ≤420 / 高 ≤110。 */
+.gbl-compact .mp-busy-card { -fx-padding: 14 16; -fx-max-width: 420;
+    -fx-background-color: #ffffff; -fx-border-color: #e5e9f0; -fx-border-width: 1;
+    -fx-background-radius: 14; -fx-border-radius: 14; }
+/* 1.2.5 C：与 GBL .dark .card 同碳灰，不用蓝灰旧值。 */
+.dark .gbl-compact .mp-busy-card { -fx-background-color: #171d26; -fx-border-color: #262d38; }
+.gbl-compact .mp-busy-overlay-title { -fx-font-size: 13.5px; -fx-font-weight: 600; -fx-text-fill: #101828; }
+.dark .gbl-compact .mp-busy-overlay-title { -fx-text-fill: #eef2f8; }
+.gbl-compact .mp-busy-overlay-elapsed { -fx-font-size: 11px; -fx-text-fill: #667085; }
+.dark .gbl-compact .mp-busy-overlay-elapsed { -fx-text-fill: #98a2b3; }
+.gbl-compact .mp-busy-overlay-cancel { -fx-min-width: 64; -fx-min-height: 32; }
+.dark .gbl-compact .mp-busy-overlay-cancel { -fx-text-fill: #e6edf5; }
+/* 1.2.4 HMCL 风格玩家列表：标题（人数）/ 圆点 / 名称 / 状态标签 / 空态。 */
+.gbl-compact .mp-player-list { -fx-padding: 8 16 8 16; -fx-spacing: 6;
+    -fx-background-color: #f7f9fc; -fx-background-radius: 12;
+    -fx-border-color: #e5e9f0; -fx-border-width: 1; -fx-border-radius: 12; }
+.dark .gbl-compact .mp-player-list { -fx-background-color: #1c2430; -fx-border-color: #2f3743; }
+.gbl-compact .mp-player-list-title { -fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #101828; }
+.dark .gbl-compact .mp-player-list-title { -fx-text-fill: #eef2f8; }
+.gbl-compact .mp-player-list-rows { -fx-spacing: 4; }
+.dark .gbl-compact .mp-player-list-rows { -fx-spacing: 4; }
+.gbl-compact .mp-player-row { -fx-spacing: 8; -fx-alignment: center-left; -fx-padding: 3 0 3 0; }
+.dark .gbl-compact .mp-player-row { -fx-spacing: 8; -fx-alignment: center-left; }
+.gbl-compact .mp-player-dot { -fx-min-width: 10; -fx-min-height: 10; -fx-max-width: 10;
+    -fx-max-height: 10; -fx-background-color: #37a85a; -fx-background-radius: 5; }
+.dark .gbl-compact .mp-player-dot { -fx-background-color: #6fd18f; }
+.gbl-compact .mp-player-name { -fx-font-size: 12.5px; -fx-text-fill: #344054; }
+.dark .gbl-compact .mp-player-name { -fx-text-fill: #c7cfda; }
+.gbl-compact .mp-player-tag { -fx-font-size: 11px; -fx-text-fill: #237a44;
+    -fx-background-color: #e7f6ec; -fx-background-radius: 8; -fx-padding: 2 7 2 7; }
+.dark .gbl-compact .mp-player-tag { -fx-text-fill: #6fd18f; -fx-background-color: #1e3a2b; }
+.gbl-compact .mp-player-list-empty { -fx-font-size: 12px; -fx-text-fill: #667085; }
+.dark .gbl-compact .mp-player-list-empty { -fx-text-fill: #98a2b3; }
+/* 深浅主题文字兜底：GBL 原生深浅 token 之外再钉一次，避免标题在深底上变隐形。 */
+.dark .gbl-compact .page-title,
+.dark .gbl-compact .mp-big-title,
+.dark .gbl-compact .mp-sub-title { -fx-text-fill: #eef2f8; }
+.dark .gbl-compact .mp-desc,
+.dark .gbl-compact .mp-big-sub,
+.dark .gbl-compact .mp-lan-hint { -fx-text-fill: #c7cfda; }
+
+/* ==================================================== 1.2.8：版本行前置摘要徽章 + 依赖卡分类标签
+   W1 侧类名：mod-version-dep-badge / mod-version-dep-badge.required /
+   tag-dep-required / tag-dep-optional / tag-dep-embedded。
+   放文件末尾避免被后置同选择器覆盖；浅色默认 + .dark 后代深色覆盖成对。 */
+.mod-version-dep-badge {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+    -fx-text-fill: #237a44;
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+}
+.mod-version-dep-badge.required {
+    -fx-background-color: #fff1f0;
+    -fx-border-color: #fda29b;
+    -fx-text-fill: #b42318;
+}
+.dark .mod-version-dep-badge {
+    -fx-background-color: #17351f;
+    -fx-border-color: #19b36b;
+    -fx-text-fill: #7ee2a0;
+}
+.dark .mod-version-dep-badge.required {
+    -fx-background-color: #3a1d1b;
+    -fx-border-color: #f97066;
+    -fx-text-fill: #fda29b;
+}
+.tag-dep-required {
+    -fx-background-color: #fff1f0;
+    -fx-border-color: #fda29b;
+    -fx-text-fill: #b42318;
+}
+.tag-dep-optional {
+    -fx-background-color: #eaf1fb;
+    -fx-border-color: #cfe0f5;
+    -fx-text-fill: #2b6cb0;
+}
+.tag-dep-embedded {
+    -fx-background-color: #e7f6ec;
+    -fx-border-color: #a9dcbc;
+    -fx-text-fill: #237a44;
+}
+.dark .tag-dep-required {
+    -fx-background-color: #3a1d1b;
+    -fx-border-color: #7f1d1d;
+    -fx-text-fill: #f97066;
+}
+.dark .tag-dep-optional {
+    -fx-background-color: #1b2a3d;
+    -fx-border-color: #2f4b6e;
+    -fx-text-fill: #8ab4f8;
+}
+.dark .tag-dep-embedded {
+    -fx-background-color: #17351f;
+    -fx-border-color: #19b36b;
+    -fx-text-fill: #7ee2a0;
+}
+
+
+/* ==================================================== 1.2.9：HMCL 式下载确认框
+   类名：install-confirm-card / install-confirm-title / install-confirm-version-bar /
+   install-confirm-version-name / install-confirm-scroll / install-confirm-deps /
+   install-confirm-section / install-confirm-empty / install-confirm-actions。
+   限高由 Java 侧 setMaxHeight(320) 控制（CSS 不写死 -fx-max-height）；
+   浅色默认 + .dark 后代覆盖成对；放文件末尾确保最后生效。 */
+.install-confirm-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 16;
+    -fx-border-color: #e4e9f1;
+    -fx-border-width: 1;
+    -fx-padding: 18 20 14 20;
+}
+.dark .install-confirm-card {
+    -fx-background-color: #171d26;
+    -fx-border-color: #303846;
+}
+.install-confirm-title {
+    -fx-text-fill: #101828;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+.dark .install-confirm-title { -fx-text-fill: #eef2f8; }
+.install-confirm-version-bar {
+    -fx-alignment: center-left;
+    -fx-spacing: 8;
+    -fx-padding: 0 0 10 0;
+}
+.dark .install-confirm-version-bar { -fx-alignment: center-left; -fx-spacing: 8; }
+.install-confirm-version-name {
+    -fx-text-fill: #344054;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+.dark .install-confirm-version-name { -fx-text-fill: #d7dee9; }
+.install-confirm-scroll {
+    -fx-background-color: #f7f9fc;
+    -fx-background-radius: 10;
+    -fx-border-color: #e6ebf2;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+}
+.dark .install-confirm-scroll {
+    -fx-background-color: #121821;
+    -fx-border-color: #2b3441;
+}
+.install-confirm-deps {
+    -fx-spacing: 6;
+    -fx-padding: 6 8 6 8;
+}
+.dark .install-confirm-deps { -fx-spacing: 6; }
+.install-confirm-section {
+    -fx-text-fill: #344054;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 0 2 0;
+}
+.dark .install-confirm-section { -fx-text-fill: #d7dee9; }
+.install-confirm-empty {
+    -fx-text-fill: #667085;
+    -fx-font-size: 13px;
+    -fx-padding: 18 6 18 6;
+}
+.dark .install-confirm-empty { -fx-text-fill: #98a2b3; }
+.install-confirm-actions {
+    -fx-alignment: center-right;
+    -fx-spacing: 10;
+    -fx-padding: 10 0 0 0;
+}
+.dark .install-confirm-actions { -fx-alignment: center-right; -fx-spacing: 10; }
+
+/* ---------------------------------------- 1.3.1：联机核心说明 + 玩家皮肤头像（放末尾，最后生效） ---------------- */
+/* 浅色默认：正文灰蓝；深色后代覆盖成对，避免深卡上文字发暗看不清。 */
+.mp-core-note {
+    -fx-text-fill: #475467;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 2px;
+    -fx-padding: 8 4 2 4;
+}
+.dark .mp-core-note { -fx-text-fill: #b6c2d1; }
+
+/* 头像覆盖在 .mp-player-dot 绿点占位之上；取到皮肤才显示，取不到仍是绿点。 */
+.mp-player-head {
+    -fx-fit-width: 18;
+    -fx-fit-height: 18;
+    -fx-smooth: false;
+}
