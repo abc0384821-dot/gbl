@@ -1,0 +1,207 @@
+classDiagram
+    direction LR
+    class LoaderType {
+        <<enumeration>>
+        +String label
+        +String id
+        +String category
+        +String metaBase
+        +String maven
+        +String depKey
+        +metaUrl(String) String
+        +fromDepKey(String) LoaderType
+    }
+    class LoaderVersion {
+        <<record>>
+        +String version
+        +boolean stable
+    }
+    class LoaderStatus {
+        <<record>>
+        +LoaderType type
+        +String loaderVersion
+    }
+    class LoaderListener {
+        <<interface>>
+        +onStage(String)
+        +onLibProgress(int, int)
+    }
+    class LoaderInstaller {
+        +versions(LoaderType, String) List
+        +status(String) LoaderStatus
+        +install(String, LoaderType, String, Listener) void
+        +uninstall(String, Listener) void
+    }
+    class VersionJson {
+        +load(String) Meta
+        +cached(String) Meta
+        +local(String) Map
+        +raw(String) Map
+        +save(String, Map) void
+    }
+    class Meta {
+        <<record>>
+        +String id
+        +List~Object~ libraries
+        +String mainClass
+        +List~Object~ gameArgs
+    }
+    class Lib {
+        <<record>>
+        +String path
+        +String url
+        +String originUrl
+        +String sha1
+    }
+    class LibFetcher {
+        +missing(Meta) List~Lib~
+        +fetch(List, Listener) List
+    }
+    class Mod {
+        <<record>>
+        +Path file
+        +String fileName
+        +String displayName
+        +String modId
+        +String loader
+        +boolean enabled
+        +long sizeBytes
+        +String subdir
+    }
+    class ModInfo {
+        <<record>>
+        +String modId
+        +String displayName
+        +String loader
+        +String version
+    }
+    class ModStore {
+        +modsDir() Path
+        +scan() List~Mod~
+        +setEnabled(Path, boolean) void
+        +uninstall(Path) boolean
+        +readInfo(Path) ModInfo
+    }
+    class ModrinthHit {
+        <<record>>
+        +String projectId
+        +String title
+        +String description
+        +long downloads
+        +String iconUrl
+    }
+    class ModrinthFile {
+        <<record>>
+        +String url
+        +String filename
+        +String sha1
+        +long size
+    }
+    class ModrinthClient {
+        +search(String, String, LoaderType, int) List
+        +versions(String, String, LoaderType) List
+        +install(File, String, AtomicBoolean, Progress) Path
+    }
+    class ModIndexEntry {
+        <<record>>
+        +String projectId
+        +String versionId
+        +String filename
+        +String sha1
+    }
+    class ModIndex {
+        +entries(String) List
+        +add(String, Entry) void
+        +remove(String, String) void
+    }
+    class MrFile {
+        <<record>>
+        +String path
+        +String url
+        +String sha512
+        +String sha1
+        +long size
+        +boolean optional
+    }
+    class ModpackManifest {
+        <<record>>
+        +String name
+        +String mcVersion
+        +LoaderType loaderType
+        +String loaderVersion
+        +List~MrFile~ files
+        +long totalBytes
+    }
+    class ModpackListener {
+        <<interface>>
+        +onStage(String)
+        +onFileDone(int, int, String, boolean)
+        +onFinished(boolean, String)
+    }
+    class ModpackImporter {
+        +read(Path) ModpackManifest
+        +run(Path, ModpackManifest, AtomicBoolean, Listener) void
+    }
+    class FileFetch {
+        +download(String, Path, String, String, AtomicBoolean, Progress) boolean
+    }
+    class Source {
+        <<enumeration>>
+        OFFICIAL
+        BMCLAPI
+    }
+    class Rule {
+        <<record>>
+        +String fromHost
+        +String toBase
+        +String note
+    }
+    class Mirror {
+        +currentSource() Source
+        +enabled() boolean
+        +rewrite(String) String
+    }
+    class SettingsStore {
+        +downloadSource() Source
+        +withDownloadSource(Source) SettingsStore
+    }
+    class Platform {
+        +minecraftDir() Path
+        +recycle(Path) boolean
+    }
+    class GameDownloader {
+        +installed(String) boolean
+        +submit(String, Kind, Instant, String) Item
+    }
+    LoaderInstaller ..> LoaderType
+    LoaderInstaller ..> LoaderVersion
+    LoaderInstaller ..> LoaderStatus
+    LoaderInstaller ..> LoaderListener
+    LoaderInstaller --> VersionJson : 读完整版/落盘
+    LoaderInstaller --> LibFetcher : 补下载加载器库
+    LibFetcher ..> Lib
+    LibFetcher --> Mirror : URL 重写+回落
+    VersionJson ..> Meta
+    VersionJson --> Mirror : fetchRemote 重写+回落
+    ModStore ..> Mod
+    ModStore ..> ModInfo
+    ModStore --> Platform : 回收站卸载
+    ModrinthClient ..> ModrinthHit
+    ModrinthClient ..> ModrinthFile
+    ModrinthClient --> FileFetch : 下载落盘
+    ModrinthClient --> ModIndex : 写索引
+    ModrinthClient --> ModStore : mods 目录约定
+    ModIndex ..> ModIndexEntry
+    ModpackImporter ..> MrFile
+    ModpackImporter ..> ModpackManifest
+    ModpackImporter ..> ModpackListener
+    ModpackImporter --> FileFetch : files 下载
+    ModpackImporter --> LoaderInstaller : 复用装加载器
+    ModpackImporter --> GameDownloader : 确保基础版本已装
+    ModpackImporter --> ModIndex : mrpack 内 Modrinth 文件记索引
+    Mirror ..> Source
+    Mirror ..> Rule
+    Mirror --> SettingsStore : 读下载源
+    GameDownloader --> Mirror
+    AssetFetcher --> Mirror
+    VersionManifest --> Mirror
