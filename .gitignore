@@ -1,0 +1,29 @@
+# 构建产物
+target/
+build/
+dist/
+*.class
+*.jar
+!src/main/deploy/authlib-injector.jar
+
+# 发布包与日志
+*.zip
+*.log
+logs/
+tmp/
+
+# 本地运行数据
+.minecraft/
+
+# 第三方引擎二进制
+vendor/engines/
+
+# 密钥
+*.key
+*.pfx
+*.p12
+
+# 工具与本地产物
+.workbuddy/
+__pycache__/
+*.pyc
