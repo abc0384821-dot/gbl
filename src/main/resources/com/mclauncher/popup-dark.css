@@ -1,0 +1,107 @@
+/*
+ * ComboBox 弹层的深色样式，第二张样式表，只在深色主题下挂到弹层 scene 上。
+ *
+ * 为什么不写在 theme.css 里套 .dark：
+ * 弹层的根节点是 PopupControl 自己（类名 popup），CSS 只把它当成「被命中的那个节点」，
+ * 它身上的类**不会**进入子节点的匹配链——所以 theme.css 里写 .popup.dark .list-view
+ * 命中不了 list-view（实测：根节点拿到了 #171d26，list-view 还是 modena 的白底灰渐变）。
+ * 而 .combo-box-popup 在场景树里确实是 list-view 的祖先（弹层的 CSSBridge），
+ * 所以这里不套主题前缀（靠「只在深色才挂」来区分），直接用能在祖先链上命中的类名。
+ *
+ * 选择器风格照抄 modena 的 ComboBox 弹层写法，保证命中的是同一批节点。
+ */
+.popup,
+.combo-box-popup {
+    -fx-background-color: #171d26;
+    -fx-border-color: #2f3946;
+}
+
+/* 主窗口是 StageStyle.TRANSPARENT：list-view / list-cell / viewport 任一层透明，都会透出分隔线与进度条，三层都要给实底 */
+.combo-box-popup .list-view {
+    -fx-background-color: #171d26;
+    -fx-background-radius: 12;
+    -fx-border-color: #2f3946;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+}
+
+.combo-box-popup .list-cell {
+    -fx-text-fill: #dfe6ef;
+    -fx-font-size: 12.5px;
+    -fx-padding: 8 12 8 12;
+    -fx-min-height: 32;
+    -fx-background-color: #171d26;
+}
+
+/* viewport 会自带 modena 白底，必须连它一起压成实底，否则深色下拉仍会透出主窗口 */
+.combo-box-popup .list-view > .virtual-flow > .viewport,
+.combo-box-popup .viewport {
+    -fx-background-color: #171d26;
+}
+
+.combo-box-popup .list-cell:selected {
+    -fx-background-color: #17351f;
+    -fx-text-fill: #7ee2a0;
+    -fx-font-weight: bold;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #1c232d;
+}
+
+/* 0.9.4 r2：弹层滚动条照 HMCL 悬浮细条。本表只在深色时挂载，故规则不套 .dark 前缀。 */
+.combo-box-popup .scroll-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.combo-box-popup .scroll-bar:vertical   { -fx-pref-width: 10px; }
+.combo-box-popup .scroll-bar:horizontal { -fx-pref-height: 10px; }
+
+.combo-box-popup .scroll-bar .track,
+.combo-box-popup .scroll-bar .track-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.combo-box-popup .scroll-bar .thumb {
+    -fx-background-color: rgba(203, 213, 225, 0.26);
+    -fx-background-radius: 999;
+    -fx-background-insets: 0 2 0 2;
+}
+.combo-box-popup .scroll-bar:horizontal .thumb { -fx-background-insets: 2 0 2 0; }
+.combo-box-popup .scroll-bar .thumb:hover   { -fx-background-color: rgba(203, 213, 225, 0.46); }
+.combo-box-popup .scroll-bar .thumb:pressed { -fx-background-color: rgba(203, 213, 225, 0.60); }
+
+.combo-box-popup .scroll-bar .increment-arrow,
+.combo-box-popup .scroll-bar .decrement-arrow {
+    -fx-shape: "";
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+}
+.combo-box-popup .scroll-bar .increment-button,
+.combo-box-popup .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+}
+
+/* 弹层 ProgressBar 中性兜底（HMCL 口径，圆角 2、无品牌绿、无阴影） */
+.combo-box-popup .progress-bar          { -fx-pref-height: 8px; -fx-background-color: transparent; }
+.combo-box-popup .progress-bar > .track { -fx-background-color: rgba(203,213,225,0.14); -fx-background-radius: 2; -fx-background-insets: 0; }
+.combo-box-popup .progress-bar > .bar   { -fx-background-color: rgba(203,213,225,0.55); -fx-background-radius: 2; -fx-background-insets: 0; -fx-padding: 0; }
+
+
+/* 0.9.9 r13：下拉滚动条与主题一致 —— 12px 轨道 / insets 1 / 高对比，消掉下拉里更细的问题 */
+.combo-box-popup .scroll-bar:vertical   { -fx-pref-width: 12px; }
+.combo-box-popup .scroll-bar:horizontal { -fx-pref-height: 12px; }
+/* 1.0.1 修复：同样按方向设最小长度，禁止同时设 min-width/min-height 把垂直滑块撑成 48×48 越界 */
+.combo-box-popup .scroll-bar .thumb {
+    -fx-background-insets: 1;
+    -fx-background-color: rgba(203, 213, 225, 0.58);
+}
+.combo-box-popup .scroll-bar:vertical .thumb   { -fx-min-height: 48px; }
+.combo-box-popup .scroll-bar:horizontal .thumb { -fx-min-width: 48px; }
