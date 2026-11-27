@@ -1,0 +1,204 @@
+%% GBL 0.8.7 关键调用时序（4 张）
+%% 图 1：版本级依赖三分类提示（U1 全链路 + Q2 方案 A）
+
+sequenceDiagram
+    autonumber
+    actor U as 玩家
+    participant SV as ShellView (FX线程)
+    participant D as 单例弹窗 buildModDetailDialog
+    participant MC as ModrinthClient
+    participant API as api.modrinth.com/v2
+    participant MV as ModValidator
+    participant MI as ModIndex
+
+    U->>SV: 点击模组卡片 (下载→模组 tab)
+    SV->>D: openModDialog(hit) 设 kind=MOD, source=MODRINTH
+    SV->>MC: project(projectId) 【取标题/封面/分类】
+    MC->>API: GET /v2/project/{id}
+    API-->>MC: Project (无 dependencies 字段)
+    SV->>MC: allVersions(projectId)
+    MC->>API: GET /v2/project/{id}/version
+    API-->>MC: 243×Version, 每个含 dependencies[]
+    MC->>MC: 解析 project_id(可null)/version_id/file_name/dependency_type
+    MC-->>SV: List~Version~(含 dependencies)
+    SV->>D: populateModDialog(...) 渲染版本列表(共享依赖区在上方)
+    SV->>SV: 默认选中「当前游戏版本推荐版本」→ selectedVersion=v0
+    SV->>D: populateDeps(v0.dependencies(), MOD, MODRINTH)
+    D->>D: clear() + 按 DependencyKind 四分类
+    D->>MC: projects(ids) 【一次批量反查, 后台daemon】
+    Note over D,MC: ids 只取非 null 的 project_id<br/>file_name 100% null / version_id 90.6% null 不可用于展示
+    MC->>API: GET /v2/projects?ids=[...]
+    API-->>MC: title / icon_url (返回顺序不保证与请求一致)
+    MC-->>D: Map~id,ProjectBrief~ 【按 id 建 Map, 不按下标取】
+    D->>D: Platform.runLater 回填标题 (拉不到显ID, 不阻塞)
+    Note over D: REQUIRED「必须安装」+按钮 / EMBEDDED「作者已打包」灰字无按钮 / OPTIONAL「可选安装」 / INCOMPATIBLE 红字警告条
+
+    U->>SV: 选中另一个版本 v1 (243 行中的任意一行)
+    SV->>D: selectedVersion=v1; populateDeps(v1.dependencies(), ...)
+    D->>D: clear() 且丢弃在飞的旧反查结果 (令牌校验)
+    D-->>U: 依赖区随版本切换, 无残留
+
+    U->>D: 点「安装前置」(required 缺失项)
+    D->>SV: installDependency(projectId, btn) 【Q4 逐项, 不递归】
+    SV->>MC: 挑当前游戏版本最新兼容版 → install(f, gameId, v.dependencies(), c, l)
+    MC->>MC: requires = ModValidator.requiredOf(versionDeps)
+    MC->>MI: add(gameId, Entry(..., requires))
+    MC-->>SV: Path
+    SV->>D: 该行变「✓ 已安装」
+
+    U->>SV: 点版本行「安装」(主文件)
+    SV->>D: dispatchInstall(v, btn)
+    D->>D: 查分发表: kind=MOD/source=MODRINTH
+    D->>MC: install(f, gameId, v.dependencies(), c, l) 【5参重载, 4参签名不变】
+    MC->>MI: add(gameId, Entry(..., requires))
+    MC-->>D: Path(mods/)
+    D-->>U: toast「装好了」+ refreshGameManage()
+
+    Note over SV,MI: 启动前 ModValidator.validate() 读 ModIndex.requires 对账 —— 链路自 Version.dependencies[] 到启动校验全程贯通 (U1)
+
+%% ------------------------------------------------------------------
+%% 图 2：三个内容 tab 浏览 + 安装分发（U4 状态机 / Q1 数据源不对称）
+
+sequenceDiagram
+    autonumber
+    actor U as 玩家
+    participant SV as ShellView (FX线程)
+    participant D as 单例弹窗
+    participant MA as ModAliases
+    participant MR as ModrinthClient
+    participant CF as CurseForgeClient
+    participant CS as ContentStore
+    participant CI as ContentIndex
+    participant PF as Platform/FileFetch
+
+    U->>SV: 点第 5/6/7 个 tab-btn (index 4/5/6)
+    SV->>SV: bodyOfDownloadTab(index) → buildContentTab(index)
+    Note over SV: DOWNLOAD_TABS 8 项顺序数量不变 (H1)
+    SV->>SV: kind = ContentKind.fromTabIndex(index)
+    SV->>MA: expand(query, kind) 【按上下文取表, 不回落 MOD 表】
+    MA-->>SV: 中文词扩展 (光影 tab 不会补出 Iris Shaders)
+
+    alt kind = RESOURCEPACK / SHADER (双源)
+        par Modrinth
+            SV->>MR: search(q, mc, ..., kind.modrinthType)
+            MR-->>SV: List~Hit~
+        and CurseForge
+            SV->>CF: search(q, mc, ..., kind.cfClassId) 【6参新重载】
+            CF-->>SV: List~Hit~
+        end
+    else kind = WORLD (仅 CF, Q1)
+        SV->>CF: search(q, mc, ..., CLASS_ID_WORLDS=17)
+        CF-->>SV: List~Hit~
+        SV->>SV: 结果栏顶部加「来源：CurseForge」
+    end
+    SV->>SV: 合并去重 → modCardView()/modpackCoverCard() + loadCover() 异步缓存
+
+    U->>SV: 点卡片
+    SV->>D: openContentDialog(hit, kind, source) → 状态机设 kind/source
+    SV->>D: 版本列表 + 每行安装按钮 (versionRowView)
+
+    U->>D: 点安装
+    D->>SV: dispatchInstall(selected, btn) 【唯一出口】
+    SV->>SV: 查分发表
+
+    alt kind = RESOURCEPACK / SHADER
+        SV->>CS: installPack(kind, url, fileName, sha1, sha512, c, l, meta)
+        CS->>PF: FileFetch.download → .part → 原子 move
+        PF-->>CS: ok / 哈希失败删 .part
+        CS->>CI: add(Entry(kind, source, ...))
+    else kind = WORLD
+        SV->>CS: installWorld(url, worldName, sha1, c, l)
+        CS->>CS: 逐 ZipEntry normalize()+startsWith(dest) 防穿越 (H2)
+        CS->>CS: 解到 saves/.tmp-uuid/ → 原子 move 到 saves/{worldName}/
+        CS->>CI: add(Entry(WORLD, CURSEFORGE, ...))
+    end
+    CS-->>D: Path
+    D-->>U: toast + 下载队列进度 + refreshGameManage()
+
+    U->>SV: 切到游戏管理 → 资源包/光影/世界三段
+    SV->>CS: scan(kind) → contentRow()
+    U->>SV: 启停 (资源包/光影)
+    SV->>CS: setEnabled() 改 .disabled
+    U->>SV: 删除 / 打开文件夹 (世界)
+    SV->>PF: recycle() / reveal() 【世界无启停开关】
+
+%% ------------------------------------------------------------------
+%% 图 3：OptiFine 安装（Q6 / U5，v1.1 E8/E9/E10 实证修订）
+%% 决策不变：复用 isInstaller() 骨架；作废：--installClient（实测 exit 1 HeadlessException 零产出）
+
+sequenceDiagram
+    autonumber
+    actor U as 玩家
+    participant SV as ShellView (FX线程)
+    participant LI as LoaderInstaller
+    participant LT as LoaderType
+    participant OP as OptiFineVersionProvider
+    participant BM as BMCLAPI /optifine
+    participant VJ as VersionJson
+    participant PF as FileFetch/Platform
+
+    U->>SV: 下载→加载器 tab (buildLoaderTab 遍历 values() 自动出 OptiFine 卡)
+    SV->>LI: versions(OPTIFINE, mcVersion)
+    LI->>OP: get().versions(mcVersion)
+    OP->>BM: GET /optifine/{mcVersion}
+    alt 200 + 7 字段解析成功 (v1.1 E8 已实证, 不再 TODO)
+        BM-->>OP: [{_id,mcversion,type,patch,filename,forge,__v}] 无 url
+        OP-->>LI: List~OptiFineVersion~
+    else 超时 / 非2xx / 解析失败 (降级)
+        BM-->>OP: 不可解析
+        OP-->>LI: 空列表
+        LI-->>SV: 空态 + 手动输入版本串
+    end
+    SV-->>U: 版本下拉默认最新稳定版
+    Note over OP,BM: optifine.net 有 adloadx token 反爬, P0 不作源
+
+    U->>SV: 选版本 → 安装
+    SV->>LI: install(versionId, OPTIFINE, lv, listener)
+    LI->>LI: assertCombinationAllowed() 【P0 禁止与 Forge/NeoForge 组合 (U5)】
+    alt 已装 Forge/NeoForge
+        LI-->>SV: IOException「需匹配同 MC 版本, 0.8.7 不支持自动组合」
+        SV-->>U: toast 提示 (不静默装坏)
+    else 与 Fabric/Quilt/LegacyFabric 同选
+        SV-->>U: 「不兼容, 推荐 Iris Shaders + Sodium」
+    else 原版 + OptiFine (主路径, v1.1 E9/E10)
+        LI->>PF: backupBaseJar() 复制 {id}.vanilla.jar (U5 防御)
+        LI->>OP: downloadUrl(v) 拼 /optifine/{mc}/{type}/{patch}
+        OP-->>LI: URL
+        LI->>PF: FileFetch.download(installer.jar) 容忍 206 java-archive, 绝不打包
+        LI->>LI: 【E36·v1.9/#73】isValidJar() 校验, 半截jar重试最多2次 (CDN截断)
+        LI->>PF: 原样复制 installer jar → libraries/optifine/OptiFine/{ver}/... (A方案)
+        LI->>LI: ZipFile 扫条目判内嵌库(不用MANIFEST, E35) + 读 txt 动态取 ver + 解包 .jar
+        Note over LI: 【E33·v1.9】launchwrapper-of 版本随MC分档: 1.14.4→2.1 / 1.15.2~1.17.1→2.2 / 1.18.1起→2.3<br/>坐标/path/name 三处随 txt 动态生成, 绝不兜底 2.3<br/>【E34/H10·v1.9+E37·v1.10】内嵌库边界 1.13.2→1.14.4, 候选A仅适用于 MC≥1.14.4<br/>≤1.13.2 干净失败; 服务层源码不含MC阈值(动态扫zip裁决)<br/>UI=阈值无关中性预提示 + 服务层toast并存, 不硬编码 mc>=1.14.4 / 不拦截<br/>【E40·v1.11】该提示断言拆三层: L1 Snapshot(两入口不同屏分别验)/L2 QA静态/L3服务层toast<br/>【E41·v1.12】两入口属H10/E38独立派工可能分批→拆两独立用例/不写死2处/按实际落地入口验/软观测起步<br/>【E42·v1.13】类名锁死单一.optifine-scope-hint不加后缀(JavaFX精确匹配)/文案随节点就位消息同步<br/>CASES另起批次清单不混入CASES_087/连骨架都不提前写(report_087_cases假FAIL)/骨架与断言一次落地<br/>【E26·v1.6】1.7.10 HD_U/D3 实证无内嵌条目 → 解不出即抛可读 IOException<br/>不生成profile / 不写gblLoader / 不落坏版本 / 不静默改用 1.12<br/>【E32·v1.8/#72】失败时 deleteQuietly(tmpOf) 清 .gbl-tmp 7MB 临时jar, 失败点早于全部落盘<br/>→ 零落盘+零临时残留; 【E39·v1.10】T-11 显式4端点 1.14.4(2.1)/1.16.5(2.2)/1.20.1(2.3)/1.13.2(干净失败)<br/>1.20.1 用独立文件 optifine_installer_test.jar, 不得用 of_*.jar glob
+        LI->>PF: 【H9】幂等覆盖两个 path(先删后写), 落盘sha1==profile声明sha1
+        LI->>PF: 【E31·v1.8/#72】cleanPartResidue() 主动清同级 *.part 残留 (best-effort)
+        LI->>LI: 【E22】两条 artifact.url 填 127.0.0.1:1 哨兵 (optifineDownloadUrl 本体保留)
+        LI->>VJ: raw({mc}) 取完整父 JSON 作基底
+        LI->>LI: writeOptiFineProfile() 深拷贝父 JSON + appendTweakClass()
+        Note over LI: 【H7】两条 library 写全 downloads.artifact.{path,url,sha1,size}<br/>path/url 非空 · sha1/size 由落盘文件动态算(E27,禁止硬编码) · 裸 name 必崩<br/>【H8】保留父的完整 arguments.jvm+game, 只追加 --tweakClass<br/>整键覆盖会顶掉 --username/--assetsDir/--uuid → 启动必崩<br/>【E22】url 为哨兵永不请求; 【E24】真实url被误请求时 7MB 只停在 .part<br/>(:404 move 不执行, 正式文件不变) 但留垃圾且 fetch 仍 Blocked; QA 断言无 .part<br/>【E23】OptiFine 路径不调用 runInstallerJar (Forge/NeoForge 的 --installClient 豁免)
+        LI->>LI: findDerivedProfile() → {mc}-optifine-{v}
+        LI->>VJ: raw(resolved) → put("gblLoader", type=optifine) → save()
+        LI-->>SV: resolved
+        SV-->>U: 生成独立版本, 可启动 / 游戏管理可卸载还原
+    end
+
+    U->>SV: 游戏管理卸载 OptiFine
+    SV->>LI: uninstall(versionId)
+    LI->>LI: 删派生 profile + 还原 .vanilla.jar 备份
+    LI-->>U: 还原完成
+
+%% ------------------------------------------------------------------
+%% 图 4：别名上下文隔离（Q7 回归要点）
+
+sequenceDiagram
+    autonumber
+    participant SV as ShellView
+    participant MA as ModAliases
+    participant MR as ModrinthClient
+    SV->>MA: expand("光影", ContentKind.SHADER)
+    MA->>MA: 只查 SHADER 表 (不回落 MOD 表)
+    MA-->>SV: ["光影", "光影包", "Shaders"] 等专用词
+    Note over MA: MOD 表里的 p("光影","Iris Shaders") (:46) 不参与 → 不会补出模组
+    SV->>MR: search(..., "shader")
+    MR-->>SV: 光影项目结果
+    SV->>MA: expand("光影", ContentKind.MOD) 【既有模组 tab 行为】
+    MA-->>SV: ["光影", "Iris Shaders"] 【零回归】
