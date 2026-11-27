@@ -1,0 +1,116 @@
+%% GBL 0.7.0 Mod 三件套 — 关键流程时序图（4 张）
+%% 与 docs/ARCH-0.7.0-mod.md §4 对应
+
+%% ============ 1. 加载器安装 / 卸载 ============
+sequenceDiagram
+    actor U as 用户
+    participant UI as ShellView Mod中心
+    participant LI as LoaderInstaller
+    participant VJ as VersionJson
+    participant LT as LoaderType/meta API
+    participant LF as LibFetcher
+    participant FS as versions/&lt;id&gt;/
+
+    U->>UI: 加载器卡片选版本 → 点「安装」
+    UI->>UI: 起 daemon 线程 gbl-loader（回调 Platform.runLater）
+    UI->>LI: install("1.20.1", FABRIC, "0.15.7", listener)
+    LI->>VJ: raw("1.20.1")
+    VJ-->>LI: full（本地完整/缓存/网络三级补齐）
+    LI->>LI: 校验：未装加载器 且 mainClass=vanilla
+    LI->>FS: 备份 version.json → 1.20.1.vanilla.json（已存在则保留）
+    LI->>LT: GET meta.fabricmc.net/v2/versions/loader/1.20.1/0.15.7
+    LT-->>LI: {loader, intermediary, launcherMeta}
+    LI->>LI: 合并：libraries去重追加 / mainClass覆盖 / --tweakClass / gblLoader标记 / 元信息字段保全
+    LI->>VJ: save("1.20.1", merged)
+    VJ->>FS: 写 version.json 与 1.20.1.json（tmp+move）
+    LI->>VJ: load("1.20.1")
+    LI->>LF: missing(meta) → fetch(absent)
+    LF-->>UI: onLibProgress（下载线程 → runLater）
+    LI-->>UI: 返回（有库失败仅提示：启动时 GameLauncher 自愈补库）
+    UI-->>U: toast「Fabric 0.15.7 安装完成」+ 状态条刷新
+
+    Note over U,FS: 卸载：uninstall() → 拷 1.20.1.vanilla.json 逐字节还原 version.json/<id>.json → 删备份
+
+%% ============ 2. Modrinth 搜索 + 安装 ============
+sequenceDiagram
+    actor U as 用户
+    participant UI as ShellView Mod中心
+    participant MC as ModrinthClient
+    participant FF as FileFetch
+    participant MI as ModIndex
+    participant MS as ModStore
+
+    U->>UI: 搜索框输入「sodium」（防抖 300ms，串行请求）
+    UI->>MC: search("sodium", "1.20.1", FABRIC, 20)
+    MC->>MC: GET api.modrinth.com/v2/search?facets=[[project_type:mod],[versions:1.20.1],[categories:fabric]]
+    MC-->>UI: List~Hit~（标题/简介/下载量/图标URL）
+    UI-->>U: 结果列表（图标 JavaFX Image 异步加载，失败占位）
+    U->>UI: 点某结果「安装」
+    UI->>UI: 起 daemon 线程 gbl-mod
+    UI->>MC: versions(projectId, "1.20.1", FABRIC)
+    MC->>MC: GET /v2/project/&lt;id&gt;/version → 按 game_versions/loaders 过滤取最新
+    MC-->>UI: List~File~（url/filename/sha1/size）
+    UI->>MC: install(file, versionId, cancelled, progress)
+    MC->>MS: mods 目录同名已存在？→ 是：跳过并提示
+    MC->>FF: download(url, mods/&lt;file&gt;, sha1, "", cancelled, on)
+    FF->>FF: .part 落盘 → 验 sha1 → move（失败/取消删 .part）
+    FF-->>MC: true
+    MC->>MI: add(versionId, Entry{projectId, versionId, filename, sha1})
+    MC-->>UI: 完成
+    UI->>MS: scan() 刷新已装列表
+    UI-->>U: toast + 行移入「已装 Mod」
+
+%% ============ 3. .mrpack 整合包导入 ============
+sequenceDiagram
+    actor U as 用户
+    participant UI as ShellView Mod中心
+    participant MPI as ModpackImporter
+    participant GD as GameDownloader
+    participant LI as LoaderInstaller
+    participant FF as FileFetch
+    participant FS as .minecraft 根
+
+    U->>UI: 「导入整合包」选 .mrpack
+    UI->>MPI: read(mrpack)
+    MPI->>FS: 只读 zip 内 modrinth.index.json
+    MPI-->>UI: Manifest（名称/MC版本/加载器/文件数/总大小）
+    UI-->>U: 确认卡
+    U->>UI: 确认导入
+    UI->>UI: 起 daemon 线程 gbl-mrpack（持 AtomicBoolean cancelled）
+    UI->>MPI: run(mrpack, manifest, cancelled, listener)
+    MPI->>GD: installed("1.20.1")? 否 → submit + 轮询至 DONE（≤15min）
+    MPI->>LI: install("1.20.1", FABRIC, "0.15.7", listener)（forge/neoforge → 明确提示不支持）
+    MPI->>FS: 解压 overrides/ + client-overrides/（zip-slip 防护；冲突先备份再覆盖）
+    loop files[]（并行≤4）
+        MPI->>FF: download(url, .minecraft/&lt;path&gt;, sha1, sha512, cancelled, on)
+        FF-->>MPI: ok（env.client==optional 默认跳过；已存在且哈希一致跳过）
+    end
+    MPI->>FS: 落 .minecraft/modrinth.index.json
+    MPI-->>UI: onFinished(ok, note)
+    UI->>MS: scan() 刷新 + 游戏列表刷新
+    UI-->>U: toast「整合包导入完成」
+
+    Note over U,FS: 取消：删本次全部 .part、不写索引、已下完文件保留（重导入按哈希跳过可续）
+
+%% ============ 4. BMCLAPI 镜像重写（四接入点同构） ============
+sequenceDiagram
+    participant UI as ShellView(下载页/Mod中心)
+    participant ST as SettingsStore
+    participant MI as Mirror
+    participant GD as GameDownloader
+    participant CDN as bmclapi2.bangbang93.com
+    participant OFF as piston-data.mojang.com
+
+    UI->>ST: withDownloadSource(BMCLAPI).save()
+    UI->>GD: submit("1.20.1", …)
+    GD->>GD: resolveJarUrl → 官方 client.url
+    GD->>MI: rewrite(官方url)
+    MI->>ST: currentSource()
+    MI-->>GD: https://bmclapi2.bangbang93.com/objects/&lt;sha1&gt;
+    GD->>CDN: 分段下载（UA = GameDownloader.AGENT）
+    alt 镜像失败（IO/非2xx，重试到头）
+        GD->>MI: （回落）换官方地址整体重跑一次
+        GD->>OFF: 分段下载
+    end
+    GD-->>UI: Item(DONE/FAILED)
+    Note over GD,OFF: VersionManifest/LibFetcher/AssetFetcher/VersionJson 同构：先 rewrite，失败回落原址一次
