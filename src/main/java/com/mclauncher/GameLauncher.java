@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDateTime;
@@ -268,9 +269,22 @@ public final class GameLauncher {
             // 没尝试自动下载（用户关掉了 / 版本未知）：退回 1.1.1 老行为兜底
             javaExe = javaForLoose(effectiveMajor);
         }
+        // 1.3.3：**自动下载失败 ≠ 这个包玩不了**。诊断包那个 1.20.1 + Fabric（59 个 mod、
+        // fabric-api / sodium / fabricloader 全是 Java 17 级别）的整合包，在同一台机器上用
+        // Java 27 完整跑通过——世界生成、存档、正常退出、零 Java 报错。它被挡在门外唯一的原因
+        // 就是：本机没有精确的 Java 17，自动下载又失败，然后这里直接 throw。
+        // 所以精确版拿不到时，宁可退一步用本机已有的、主版本不低于要求的 Java 起。
+        // 老版本（effectiveMajor < 17）不进这条兜底：Java 25/27 跑 1.16 会崩在反射 / ASM 上，
+        // 那条继续走原来的明确提示（fallbackTried 也保持 false，免得文案说瞎话）。
+        boolean fallbackTried = false;
+        if (javaExe == null && triedDownload && downloadFallbackAllowed(effectiveMajor)) {
+            fallbackTried = true;
+            javaExe = javaForDownloadFallback(effectiveMajor);
+        }
         if (javaExe == null) {
-            // 自动下载也失败：说清「什么失败 + 为什么 + 下一步」
-            throw new Blocked(javaMissingReason(effectiveMajor, mcMajor, triedDownload));
+            // 自动下载也失败、本机也没有更高的可用 Java：说清「什么失败 + 为什么 + 下一步」
+            throw new Blocked(javaMissingReason(effectiveMajor, mcMajor, triedDownload,
+                    fallbackTried));
         }
 
         // natives 落点跟着这个版本的 jvm 参数走：26.3 这类新版写死
@@ -1733,6 +1747,133 @@ public final class GameLauncher {
         return bundled;
     }
 
+    /**
+     * 1.3.3：**自动下载失败后的最后一条活路**——用本机已有的、主版本 &ge; 要求的 Java 起。
+     *
+     * <p>为什么要有它：1.3.0 起 {@link #javaFor} 对「要求 &ge; 17」的版本走精确主版本匹配，
+     * 本机没有精确那一份时返回 {@code null} 交给 {@link JavaInstaller#ensureJava} 自动下载。
+     * 这个策略本身是对的（Cobblemon 要 Java 21 时不能被 Java 25 顶包，否则
+     * UnsupportedClassVersionError），但它把「下载失败」也退化成了「不能玩」：
+     * 实测那份 1.20.1 + Fabric 59 mod 的整合包在本机 Java 27 上完整跑通（世界、存档、
+     * 正常退出、零报错），却因为下不到精确的 Java 17 被直接 Blocked。
+     * 精确的拿不到，就用能顶上的——这就是本方法。
+     *
+     * <p>判据只有一条：候选的 {@code major >= effectiveMajor}（自然满足「Cobblemon 要 21、
+     * 本机只有 17 就仍然拦」这条 1.3.0 的老防护）。此外还有两道闸：
+     * <ol>
+     *   <li>只在 {@code effectiveMajor >= 17} 时启用——老 MC（1.16 要 Java 8）用 Java 25
+     *       会因反射 / ASM 变化崩，那条仍然走 {@link #javaMissingReason} 的明确提示；</li>
+     *   <li>候选数量大于一且都合格时取**主版本最高**的那份——高版本向下兼容更稳，
+     *       本机同时有 25 和 27 时用 27。</li>
+     * </ol>
+     *
+     * <p>这个兜底**只在自动下载失败后**触发：{@link #javaFor} 的精确优先不变，自动下载成功
+     * 时仍用下载的精确版本，用户关掉自动下载时仍走 {@link #javaForLoose} 的老路径。
+     *
+     * @param effectiveMajor 本版本真正需要的主版本（MC 要求与已装 mod 声明的最大值）
+     * @return 可直接启动的 java 可执行文件；本机确实没有能顶上的返回 {@code null}
+     */
+    private static Path javaForDownloadFallback(Integer effectiveMajor) {
+        if (!downloadFallbackAllowed(effectiveMajor)) {
+            // 老版本不兜底：Java 25/27 跑 1.16 会崩在反射 / ASM 上，宁可给明确提示
+            return null;
+        }
+        List<Path> candidates = new ArrayList<>(collectSystemCandidates());
+        // 便携包自带的完整 JRE（Java 25）也是候选之一：本机既没装别的、下载又失败时它常常
+        // 是唯一能给的东西。这里直接用 findBundledJre() 而不是 bundledJavaFor(...)：后者会打印
+        // 「系统 Java 没匹配到」这种此刻未必成立的话，且它内部还带着 +1 上限的旧口径，
+        // 本兜底恰恰要放开那个上限（诊断已证明 Java 27 能跑 1.20.1）。
+        Path bundled = findBundledJre();
+        if (bundled != null) {
+            candidates.add(bundled);
+        }
+        JavaPick pick = selectDownloadFallback(candidates, effectiveMajor, GameLauncher::majorOf);
+        if (pick == null) {
+            System.out.println("[launch] 精确版 Java " + effectiveMajor
+                    + " 没装上（自动下载失败），本机也没有 " + effectiveMajor + " 及以上的可用 Java");
+            return null;
+        }
+        // 日志写清用的是「本机装的」还是「便携包自带的」，方便看日志定位（诊断包里就靠这几行）
+        boolean fromBundled = bundled != null && bundled.equals(pick.exe());
+        if (fromBundled) {
+            System.out.println("[launch] 精确版 Java " + effectiveMajor
+                    + " 下载失败，改用便携包自带 JRE（Java " + pick.major()
+                    + "）启动（该版本已能运行本游戏）: " + pick.exe());
+        } else {
+            System.out.println("[launch] 精确版 Java " + effectiveMajor + " 下载失败，改用本机 Java "
+                    + pick.major() + " 启动（该版本已能运行本游戏）: " + pick.exe());
+        }
+        return pick.exe();
+    }
+
+    /** 兜底开关：只有现代版本（{@code effectiveMajor >= 17}）才允许用「更高的 Java」顶上。 */
+    private static boolean downloadFallbackAllowed(Integer effectiveMajor) {
+        return effectiveMajor != null && effectiveMajor >= 17;
+    }
+
+    /**
+     * 兜底选择的核心（纯函数，major 探测可注入，QA 直接调）。
+     *
+     * <p>规则：跳过不存在的、跳过裁剪 runtime（缺 {@code java.logging}），跳过主版本低于
+     * {@code effectiveMajor} 的；在剩下的里挑主版本最高的那份。
+     */
+    private static JavaPick selectDownloadFallback(List<Path> candidates, Integer effectiveMajor,
+                                                   Function<Path, Integer> majorResolver) {
+        if (!downloadFallbackAllowed(effectiveMajor) || candidates == null) {
+            return null;
+        }
+        JavaPick best = null;
+        for (Path candidate : candidates) {
+            if (candidate == null) {
+                continue;
+            }
+            try {
+                if (!Files.isRegularFile(candidate)) {
+                    continue;
+                }
+            } catch (RuntimeException ex) {
+                continue;   // 非法路径片段，跳过
+            }
+            if (needsModuleCheck(candidate) && !javaHasLoggingModules(candidate)) {
+                continue;   // 裁剪 runtime 缺 java.logging，MC 会在类初始化阶段崩
+            }
+            Integer major = majorResolver == null ? majorOf(candidate) : majorResolver.apply(candidate);
+            if (major == null || major < effectiveMajor) {
+                // 低于要求的一律不选：Cobblemon 要 Java 21 而本机只有 17 时，必须仍然拦
+                continue;
+            }
+            if (best == null || major > best.major()) {
+                best = new JavaPick(candidate, major);   // 高版本向下兼容更稳，取最高的
+            }
+        }
+        return best;
+    }
+
+    /**
+     * QA 钩子：候选可注入，按真实机器上的 {@code release} / {@code -version} 探主版本。
+     *
+     * <p>用法：造几个假候选（目录里放一个空的 {@code bin/java}，同目录 {@code release} 写
+     * {@code JAVA_VERSION="27"}），断言返回的是主版本够高的那一份。传入
+     * {@code effectiveMajor = 8}（老 MC）应恒为 {@code null}。
+     */
+    public static Path javaForDownloadFallbackForTests(List<Path> candidates,
+                                                       Integer effectiveMajor) {
+        JavaPick pick = selectDownloadFallback(candidates, effectiveMajor, GameLauncher::majorOf);
+        return pick == null ? null : pick.exe();
+    }
+
+    /**
+     * QA 钩子：连主版本探测也能注入（不想造 {@code release} 文件、也不想真跑 {@code -version}
+     * 拖慢测试时用）。{@code majorResolver} 返回 {@code null} 表示「这份探不出主版本」，
+     * 按不可用处理。
+     */
+    public static Path javaForDownloadFallbackForTests(List<Path> candidates,
+                                                       Integer effectiveMajor,
+                                                       Function<Path, Integer> majorResolver) {
+        JavaPick pick = selectDownloadFallback(candidates, effectiveMajor, majorResolver);
+        return pick == null ? null : pick.exe();
+    }
+
     /** 系统 Java 候选：手动 javaPath → 真 PATH → JAVA_HOME → 常见安装目录 → 系统目录。 */
     private static List<Path> collectSystemCandidates() {
         List<Path> out = new ArrayList<>();
@@ -2076,6 +2217,18 @@ public final class GameLauncher {
      */
     private static String javaMissingReason(Integer requiredMajor, Integer mcMajor,
                                             boolean autoFailed) {
+        return javaMissingReason(requiredMajor, mcMajor, autoFailed, false);
+    }
+
+    /**
+     * 1.3.3：自动下载失败、且「用本机更高的 Java 顶上」这条兜底也没成时，把这两步都写清楚，
+     * 并给出真正能做的下一步（换网络重试 / 手动指定），别让人读完不知道干什么。
+     *
+     * <p>{@code fallbackTried} 为 {@code false} 时（老版本 effectiveMajor &lt; 17，兜底本来
+     * 就不启用）保持 1.1.2 那句原文案不变。
+     */
+    private static String javaMissingReason(Integer requiredMajor, Integer mcMajor,
+                                            boolean autoFailed, boolean fallbackTried) {
         String need = requiredMajor == null ? "更高版本的 Java" : ("Java " + requiredMajor);
         String why = (mcMajor != null && requiredMajor != null && requiredMajor > mcMajor)
                 ? "这个整合包的模组需要 " + need + "（Minecraft 本身只要 Java " + mcMajor + "）"
@@ -2083,9 +2236,17 @@ public final class GameLauncher {
         String base = why + "。"
                 + "便携包已自带 Java 25（jre/bin/java.exe）；"
                 + "若仍找不到可用 Java，请在设置页手动指定或安装对应版本。";
-        return autoFailed
-                ? base + "刚才尝试自动下载也失败了，请检查网络，或手动指定 Java 路径。"
-                : base;
+        if (!autoFailed) {
+            return base;
+        }
+        if (fallbackTried) {
+            String tail = requiredMajor == null
+                    ? "刚才自动下载 Java 也没成功，本机也没有别的可用 Java。"
+                    : "刚才自动下载 Java " + requiredMajor + " 也没成功，本机也没有 Java "
+                            + requiredMajor + " 及以上的可选项。";
+            return base + tail + "可以换个网络再点一次启动，让启动器重新下一遍。";
+        }
+        return base + "刚才尝试自动下载也失败了，请检查网络，或手动指定 Java 路径。";
     }
 
     private static List<Path> javaHomeLike() {
