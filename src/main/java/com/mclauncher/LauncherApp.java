@@ -13,10 +13,10 @@ import java.nio.file.Path;
 public class LauncherApp extends Application {
 
     /** 版本号。界面状态栏与打包脚本的 APP_VERSION 都以此为准，改版本只改这一处。 */
-    public static final String VERSION = "1.3.3";
+    public static final String VERSION = "1.3.4";
 
     /** 构建批次号。用于自动更新判断新旧，用户无需关心。 */
-    public static final String BUILD = "1.3.3";
+    public static final String BUILD = "1.3.4";
 
     /** 界面展示版本号：带 v 前缀的完整版本号（如 v1.0.1），窗口标题与状态栏都用它。 */
     public static final String DISPLAY_VERSION = "v" + VERSION;
@@ -324,6 +324,16 @@ public class LauncherApp extends Application {
     public static final String FP_1_3_3 =
             "GBL 1.3.3 自定义主题·Java下载失败兜底·源码双仓";
     static { System.err.println("[app] " + FP_1_3_3); }
+
+    /**
+     * 1.3.4 指纹：修两个真实 Bug —— 自定义壁纸第二次换图不生效（fixed 文件名覆盖写导致
+     * 路径不变、被运行时误判成同一张而跳过重新解码），色环外圈被 196x196 方形画布
+     * 上下左右裁成直边（描边外缘 104 > 画布半宽 98）。
+     * 独立真实字符串常量（进 class 常量池），历史指纹一条不删。勿改这串字。
+     */
+    public static final String FP_1_3_4 =
+            "GBL 1.3.4 壁纸换图修复·色环完整圆";
+    static { System.err.println("[app] " + FP_1_3_4); }
 
     private static final double MIN_WIDTH = 680;
     private static final double MIN_HEIGHT = 460;
