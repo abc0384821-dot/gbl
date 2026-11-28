@@ -1318,14 +1318,21 @@
 }
 
 /* 次级灰：浅色那套的 #98a2b3 搬到深底上只有 5.5:1，13px 以下的说明字看着发灰，
-   这里整体提一档到 #b3bfcd（≈9:1）——「深色下所有字样都要看得清」 */
+   这里整体提一档到 #a7b2c0（≈8.9:1）——「深色下所有字样都要看得清」
+   1.3.3 注：原注释写的 #b3bfcd，但规则体一直没写出来（见下方说明），实际生效的是绿色。 */
 .dark .setting-desc,
 .dark .nav-section,
 .dark .empty-hint,
 .dark .page-blank-desc,
-.dark .row-hint,
-/* 状态字在两套主题下都是绿的，只是深浅各取一个：浅底要压得住、深底要提得亮。
-   这里的规则必须留着把上一行的浅绿盖掉，否则深色下会退回 #1f7a44 看不清。 */
+.dark .row-hint {
+    /* 1.3.3 修正：这一组原先结尾多了一个逗号，选择器列表被后面的 .dark .status-text
+       一起吞掉，导致深色下所有说明文字都被染成了亮绿 #7ee2a0（与上方注释写的
+       "#b3bfcd" 不符，也让"自定义文字颜色"漏掉这批字）。这里按注释原意拆开：
+       说明字用等级灰（#a7b2c0，深底上约 8.9:1），状态绿单独一条。 */
+    -fx-text-fill: #a7b2c0;
+}
+
+/* 状态字在两套主题下都是绿的，只是深浅各取一个：浅底要压得住、深底要提得亮。 */
 .dark .status-text {
     -fx-text-fill: #7ee2a0;
 }
@@ -3856,4 +3863,200 @@
     -fx-fit-width: 18;
     -fx-fit-height: 18;
     -fx-smooth: false;
+}
+
+/* ==================================================================== 1.3.3 自定义外观
+   这一段的类名都由 Java 侧在「用户真的用了自定义」时才挂上（.gbl-wallpaper / .selected），
+   出厂状态下一条都不命中，所以不自定义时观感与 1.3.2 逐像素一致。
+
+   注意：主题色与文字色**不在这里写死**。它们由 com.mclauncher.ThemeCss 在运行时把 theme.css
+   整份做色值映射、生成一份新样式表追加到本文件之后（同名规则后者赢）。这么做的原因：
+   全表 311 处 -fx-text-fill、200 多处绿色字面量，逐条补覆盖规则必然漏，整份映射才不会漏。 */
+
+/* ------------------------------------------------- 左侧功能栏：三种模式下都半透明
+   底下的 .frame（纯色背景）或壁纸蒙版负责兜底，字始终够对比度。
+   两种纯色模式下的半透明只差一档明度，与原来的实色 #ffffff / #141a22 几乎看不出区别。 */
+.side-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.74);
+}
+.dark .side-bar {
+    -fx-background-color: rgba(20, 26, 34, 0.74);
+}
+
+/* ------------------------------------------------- 壁纸层与固定蒙版
+   蒙版透明度写死、界面不提供调节：它不负责「给壁纸换色」，只负责让字看得清。
+   浅色盖白、深色盖黑，随深浅主题自动切。 */
+.gbl-wallpaper-layer {
+    -fx-background-color: transparent;
+}
+.gbl-wallpaper-scrim {
+    -fx-background-color: rgba(255, 255, 255, 0.42);
+}
+.shell.dark .gbl-wallpaper-scrim {
+    -fx-background-color: rgba(0, 0, 0, 0.56);
+}
+
+/* 壁纸模式：整窗底色让给壁纸，顶栏 / 侧栏 / 状态栏改成「玻璃」半透明。
+   圆角仍由 shell 的 frameClip 统一裁，壁纸和蒙版都在裁剪范围内，四角不会漏直角。 */
+.gbl-wallpaper .frame {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.gbl-wallpaper .app-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.62);
+    -fx-border-color: transparent transparent rgba(15, 23, 42, 0.08) transparent;
+}
+.gbl-wallpaper .status-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.62);
+}
+.gbl-wallpaper .side-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.60);
+    -fx-border-color: transparent rgba(15, 23, 42, 0.08) transparent transparent;
+}
+.dark.gbl-wallpaper .app-bar {
+    -fx-background-color: rgba(16, 21, 28, 0.62);
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.08) transparent;
+}
+.dark.gbl-wallpaper .status-bar {
+    -fx-background-color: rgba(16, 21, 28, 0.62);
+}
+.dark.gbl-wallpaper .side-bar {
+    -fx-background-color: rgba(16, 21, 28, 0.60);
+    -fx-border-color: transparent rgba(255, 255, 255, 0.08) transparent transparent;
+}
+
+/* ------------------------------------------------- 设置页·外观：壁纸条
+   主题下拉里选到「自定义壁纸」时，在下拉正下方展开的一行：当前壁纸名 + 更换 / 清除。
+   刻意不用药丸、不用圆形——GBL 通篇是方形圆角控件，这里跟着走。 */
+.wallpaper-strip {
+    -fx-padding: 2 0 10 0;
+}
+.wallpaper-name {
+    -fx-text-fill: #475467;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: 500;
+}
+.dark .wallpaper-name {
+    -fx-text-fill: #c3cdd9;
+}
+
+/* 主题下拉：第四项「自定义壁纸」比另外三项长一截，150 宽会把它截成「自定义…」。
+   .setting-select 的 -fx-min-width: 150 是给全项目下拉共用的，这里单独抬到 170，
+   并且钉住不参与收缩（窄窗口下宁可让左边的说明折行）。 */
+.theme-select {
+    -fx-min-width: 170;
+    -fx-pref-width: 170;
+}
+
+/* ------------------------------------------------- 设置页：调色面板（色环 + HEX + 预设） */
+.color-picker-panel {
+    -fx-background-color: #f7f9fc;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: #e6eaf1;
+    -fx-border-width: 1;
+}
+.dark .color-picker-panel {
+    -fx-background-color: #141a22;
+    -fx-border-color: #262d38;
+}
+.color-wheel {
+    -fx-cursor: hand;
+}
+.color-hex-field {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #e3e8ef;
+    -fx-border-width: 1;
+    -fx-text-fill: #101828;
+    -fx-prompt-text-fill: #98a2b3;
+    -fx-padding: 6 10 6 10;
+    -fx-font-size: 12.5px;
+}
+.dark .color-hex-field {
+    -fx-background-color: #1c232d;
+    -fx-border-color: #2f3946;
+    -fx-text-fill: #e9eef5;
+}
+.color-hex-invalid {
+    -fx-border-color: #b42318;
+}
+.dark .color-hex-invalid {
+    -fx-border-color: #f97066;
+}
+.color-preset {
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-border-color: rgba(15, 23, 42, 0.16);
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+.color-preset:hover {
+    -fx-border-color: rgba(15, 23, 42, 0.55);
+}
+.dark .color-preset {
+    -fx-border-color: rgba(255, 255, 255, 0.20);
+}
+.dark .color-preset:hover {
+    -fx-border-color: rgba(255, 255, 255, 0.60);
+}
+.color-preview-dot {
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-border-color: rgba(15, 23, 42, 0.18);
+    -fx-border-width: 1;
+    -fx-min-width: 20;
+    -fx-min-height: 20;
+    -fx-pref-width: 20;
+    -fx-pref-height: 20;
+    -fx-max-width: 20;
+    -fx-max-height: 20;
+}
+
+/* ------------------------------------------------- 设置页·外观：取值胶囊
+   取值要**完整**显示「#rrggbb（默认）」。早先那版卡了 max-width 82 + 省略号，
+   放不下就变成「#2f9e…」，用户看不出当前到底是哪个色——这条别再收紧。 */
+.color-value-chip {
+    -fx-background-color: #f2f4f8;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-border-color: #e3e8ef;
+    -fx-border-width: 1;
+    -fx-padding: 2 8 2 8;
+    -fx-font-size: 11.5px;
+    -fx-text-fill: #475467;
+}
+.dark .color-value-chip {
+    -fx-background-color: #1c232d;
+    -fx-border-color: #2f3946;
+    -fx-text-fill: #c3cdd9;
+}
+
+/* 取值胶囊里那枚 10px 色点：加一圈发丝边。
+   浅色主题下用户可能挑到接近白的颜色，没有边就跟胶囊底色糊在一起了。 */
+.color-chip-dot {
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-border-color: rgba(15, 23, 42, 0.20);
+    -fx-border-width: 1;
+    -fx-min-width: 10;
+    -fx-min-height: 10;
+    -fx-pref-width: 10;
+    -fx-pref-height: 10;
+    -fx-max-width: 10;
+    -fx-max-height: 10;
+}
+.dark .color-chip-dot {
+    -fx-border-color: rgba(255, 255, 255, 0.30);
+}
+
+/* 设置页·外观：比普通 ghost 按钮收窄一档。
+   右边这一串要塞下「色块 + 取值胶囊 + 两个按钮」，按 .btn-ghost 的 18 内边距
+   会在窄窗口把整行顶宽，设置卡就会出现横向溢出。 */
+.btn-compact {
+    -fx-padding: 0 12 0 12;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-font-size: 12px;
 }
