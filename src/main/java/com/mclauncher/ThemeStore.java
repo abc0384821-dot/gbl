@@ -1,6 +1,7 @@
 package com.mclauncher;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
@@ -8,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -226,27 +229,93 @@ public final class ThemeStore {
      * <p>复制而不是记住原路径：用户从微信/QQ 的临时目录里选图，那个目录过几天就被清了，
      * 记原路径等于下次启动壁纸变白。
      *
-     * <p>文件名保持稳定（{@code wallpaper.<ext>}）+ 覆盖写：同一次会话里连着换三张图，
-     * 目录里也只留一张，不会越攒越多。
+     * <p><b>1.3.4 换图不生效的根因与修法：</b>1.3.3 用固定文件名
+     * {@code wallpaper.<ext>} + {@code REPLACE_EXISTING} 覆盖写，于是换图前后
+     * {@code wallpaperPath} 字符串完全一样；{@code ThemeRuntime.syncWallpaper()}
+     * 用 {@code path.equals(wallpaperSource)} 判「同一张」就直接返回，跳过了重新解码，
+     * 结果文件确实被覆盖、toast 也报「已应用」，画面却还是第一张。
+     *
+     * <p>现在文件名带**内容指纹**（{@code wallpaper-<sha256 前16位>.<ext>}）：
+     * 换一张图必得到新路径 → 下游 {@code path.equals(...)} 自然失败 → 重新解码。
+     * 同一张图重复选还是同一个路径，不会白白多存一份。
+     *
+     * <p><b>零删除</b>：旧文件（含 1.3.3 留下的 {@code wallpaper.png}）一律原样留在
+     * {@code ~/.gbl/wallpapers/} 里，本方法只写不删；{@code theme.json} 的
+     * {@code wallpaperPath} 指向最新那一张，结构不变（不新增字段）。
      */
     public ThemeStore importWallpaper(Path source) throws IOException {
         if (source == null || !Files.isRegularFile(source)) {
             throw new IOException("图片文件不存在: " + source);
         }
         Files.createDirectories(WALLPAPER_DIR);
-        String name = source.getFileName().toString();
-        int dot = name.lastIndexOf('.');
-        String ext = dot >= 0 && dot < name.length() - 1
-                ? name.substring(dot + 1).toLowerCase(Locale.ROOT) : "png";
-        Path target = WALLPAPER_DIR.resolve("wallpaper." + ext);
-        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        Path target = wallpaperTargetPathForTests(source);
+        if (!Files.isRegularFile(target)) {
+            // 目标名由内容指纹决定：不存在才写，存在说明同一张图已经存过，直接用
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
         return copy(BackgroundMode.WALLPAPER, target.toAbsolutePath().toString(), accentColor,
                 textColor, customAccent, customText);
+    }
+
+    /** 取扩展名（小写）；没有扩展名按 png 存。 */
+    private static String extensionOf(Path source) {
+        String name = source == null || source.getFileName() == null
+                ? "" : source.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return dot >= 0 && dot < name.length() - 1
+                ? name.substring(dot + 1).toLowerCase(Locale.ROOT) : "png";
     }
 
     /** 壁纸目录（给界面显示"已保存到哪"用）。 */
     public static Path wallpaperDir() {
         return WALLPAPER_DIR;
+    }
+
+    /**
+     * QA：壁纸内容指纹（SHA-256 前 16 位十六进制，小写）。
+     *
+     * <p>纯读文件，不碰界面：断言点「不同图片必须给出不同指纹，同一张图必须稳定」。
+     *
+     * @param source 用户选的原图
+     * @return 16 位十六进制指纹
+     * @throws IOException 文件不存在或读不了
+     */
+    public static String wallpaperStampForTests(Path source) throws IOException {
+        if (source == null || !Files.isRegularFile(source)) {
+            throw new IOException("图片文件不存在: " + source);
+        }
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException ex) {
+            // 标准 JRE 都带 SHA-256；真没有就退回 size + mtime，仍然保证「换图必换名」
+            return Long.toHexString(Files.size(source))
+                    + Long.toHexString(Files.getLastModifiedTime(source).toMillis());
+        }
+        try (InputStream in = Files.newInputStream(source)) {
+            byte[] buf = new byte[64 * 1024];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                digest.update(buf, 0, n);
+            }
+        }
+        byte[] sum = digest.digest();
+        StringBuilder sb = new StringBuilder(16);
+        for (int i = 0; i < 8; i++) {
+            sb.append(String.format("%02x", sum[i] & 0xff));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * QA：这张图入库后会落到哪个路径（不写盘，纯推导）。
+     *
+     * <p>断言点：换一张内容不同的图，返回值必须不同 —— 这正是 1.3.4 修
+     * 「换图不生效」的依据（路径变了，运行时才不会误判成「同一张」跳过重新解码）。
+     */
+    public static Path wallpaperTargetPathForTests(Path source) throws IOException {
+        return WALLPAPER_DIR.resolve("wallpaper-" + wallpaperStampForTests(source)
+                + "." + extensionOf(source));
     }
 
     // ------------------------------------------------------------------ 写盘
