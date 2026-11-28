@@ -28,6 +28,7 @@ import com.mclauncher.UpdateInstaller;
 import com.mclauncher.ProxyRoute;
 import com.mclauncher.BootAutostart;
 import com.mclauncher.SettingsStore;
+import com.mclauncher.ThemeStore;
 import com.mclauncher.TraySupport;
 import com.mclauncher.SingleInstance;
 import com.mclauncher.AccountStore;
@@ -65,6 +66,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
@@ -330,6 +332,30 @@ public final class ShellView implements UpdateController.UpdateUi {
     private Stage stage;
     /** 深色主题当前有没有挂上（SYSTEM 模式下跟着系统变，所以每次都要重算）。 */
     private boolean themeDark;
+    // ------------------------------------------------------------ 自定义外观（1.3.3）
+    /** 背景 / 壁纸 / 主题色 / 文字色的持久化，独立落在 {@code ~/.gbl/theme.json}，不动 config.json。 */
+    private ThemeStore themeStore = ThemeStore.load();
+    /** 外观运行时：壁纸层、固定蒙版、运行时样式表。Scene 建好之后才有值。 */
+    private ThemeRuntime themeRuntime;
+    /** 设置页「背景」三选一药丸（深色 / 浅色 / 自定义壁纸）。 */
+    /** 主题下拉下面那条壁纸条（选到「自定义壁纸」才显示）。 */
+    private VBox wallpaperStripHost;
+    /** 程序回读药丸状态时压住点击逻辑，避免"刷新界面"反过来改配置。 */
+    private boolean syncingAppearance;
+    /** 壁纸行右侧的状态文字（文件名 / 未选择）。 */
+    private Label wallpaperStateLabel;
+    /** 两枚颜色预览点与它们的取值文字。 */
+    private Region textColorSwatch;
+    private Region accentColorSwatch;
+    private Label textColorValueLabel;
+    private Label accentColorValueLabel;
+    /** 两个内联展开的调色面板宿主（默认收起、不占位）。 */
+    private VBox textPickerHost;
+    private VBox accentPickerHost;
+    private ColorPickerPanel textPicker;
+    private ColorPickerPanel accentPicker;
+    /** 外观落盘的防抖：拖动色环时不该每帧写一次 theme.json。 */
+    private PauseTransition themeSaveDebounce;
     /** 顶栏那枚「正在保存 / 已保存」的小胶囊。 */
     private Label settingsStatus;
     private final List<Node> settingsGroupButtons = new ArrayList<>();
@@ -1051,6 +1077,11 @@ public final class ShellView implements UpdateController.UpdateUi {
         scene.setFill(Color.TRANSPARENT);
         scene.getStylesheets().add(
                 getClass().getResource("/com/mclauncher/theme.css").toExternalForm());
+        // 1.3.3 自定义外观：壁纸层 / 固定蒙版 / 运行时样式表。
+        // 必须在 theme.css 挂上之后建——映射出来的样式表要追加在它后面，同名规则才赢。
+        // 也必须在上面的子节点（菜单 / 涟漪层 / toast）都加完之后建：它要插到 shell 的第 0 层。
+        themeRuntime = new ThemeRuntime(shell, scene, themeStore);
+        themeRuntime.attach(themeDark);
         // 0.9.9 r13：先试装一次，再等首帧 layout 后补一次（ScrollPane 的原生 scroll-bar
         // 要首帧才建出来）。installAll 幂等，详情弹窗（shell 内遮罩、同一 scene）一并覆盖。
         FloatScrollBarSkin.installAll(shell);
@@ -1154,9 +1185,8 @@ public final class ShellView implements UpdateController.UpdateUi {
         clip.setArcHeight(arc);
         holder.setClip(clip);
 
-        boolean dark = shell.getStyleClass().contains("dark");
-        Circle dot = new Circle(dx, dy, 1,
-                dark ? Color.web("#ffffff", 0.30) : Color.web("#2f9e58", 0.20));
+        // 1.3.3：高光颜色跟着主题色走（深色主题仍是白光，浅色主题用主题色的淡圈）
+        Circle dot = new Circle(dx, dy, 1, rippleColor());
         holder.getChildren().add(dot);
         rippleLayer.getChildren().add(holder);
         rippleLayer.setVisible(true);
@@ -5814,7 +5844,7 @@ public final class ShellView implements UpdateController.UpdateUi {
                     // 上传成功：本地也存一份，让启动器头像跟着显示
                     SkinStore.setCustom(acc, bytes, model);
                     Platform.runLater(() -> {
-                        status.setStyle("-fx-text-fill:#19b36b;");
+                        status.setStyle(successTextStyle());
                         status.setText("已上传到 Mojang，游戏内全局生效（别人也看得到）；启动器头像也已更新。");
                         status.setVisible(true);
                         applyBtn.setDisable(false);
@@ -5848,7 +5878,7 @@ public final class ShellView implements UpdateController.UpdateUi {
                 }
                 refreshUserHead();
                 refreshAccountPage();
-                status.setStyle("-fx-text-fill:#19b36b;");
+                status.setStyle(successTextStyle());
                 status.setText("已保存本地皮肤（启动游戏时注入，仅本机可见）。");
                 status.setVisible(true);
                 toast("皮肤已保存");
@@ -13135,8 +13165,23 @@ public final class ShellView implements UpdateController.UpdateUi {
             e.consume();
         });
 
-        appearanceGroup = buildCard("外观", "整套界面的配色与动效。",
-                row("主题", "跟着电脑的深浅色自动切换。", themeSelect()),
+        // 1.3.3：三个可展开区的宿主先建好，下面 buildCard 的参数从左到右求值时才能拿到非 null
+        textPickerHost = pickerHost();
+        accentPickerHost = pickerHost();
+        wallpaperStripHost = buildWallpaperStripHost();
+
+        // 「主题」一个下拉统管深浅和壁纸；选到「自定义壁纸」时，壁纸条就在下拉正下方展开。
+        // 不再单列「背景」药丸行、也不再单列「自定义壁纸」行——那两处跟这个下拉说的是同一件事。
+        appearanceGroup = buildCard("外观", "整套界面的配色、背景与动效。",
+                rowWithPanel(row("主题",
+                        "深浅两套配色，也可以换一张横屏图片当壁纸。选「跟随系统」就跟着电脑变。",
+                        themeSelect()), wallpaperStripHost),
+                rowWithPanel(row("文字颜色",
+                        "标题、正文、次要提示、按钮字与输入框字一起换色，自动分三级明度。",
+                        textColorControl()), textPickerHost),
+                rowWithPanel(row("主题色",
+                        "GBL 默认是绿色；改成别的颜色后，界面上所有绿色都会换成它。",
+                        accentColorControl()), accentPickerHost),
                 row("界面动效", "是否显示切页的淡入淡出效果。",
                         motionToggle()),
                 row("按钮特效", "点按钮时泛起的一圈涟漪。关掉它点按钮就没有动画了。",
@@ -13187,6 +13232,8 @@ public final class ShellView implements UpdateController.UpdateUi {
         // 否则 StackPane 里多张卡都 visible，会叠在一起
         settingsGroupBody = new StackPane(appearanceGroup, windowGroup, advancedGroup);
         showSettingsGroup(SettingGroup.APPEARANCE);
+        // 1.3.3：外观的初始状态（主题下拉选中项 / 壁纸条 / 色点与取值）
+        refreshAppearanceUi();
 
         VBox box = new VBox(12);
         box.getChildren().addAll(seg, settingsGroupBody);
@@ -13279,27 +13326,438 @@ public final class ShellView implements UpdateController.UpdateUi {
 
     // ------------------------------------------------------------ 控件与落盘
 
+    // ------------------------------------------------------ 自定义外观（1.3.3）
+    // 两块：主题（深浅 + 壁纸，一个下拉统管）、文字颜色 / 主题色。
+    // 口径（改前请先读）：
+    //  · 深浅和壁纸只留一个入口：「主题」下拉四项（跟随系统 / 浅色 / 深色 / 自定义壁纸）。
+    //    早先那版把深/浅又做成三个圆形药丸摆一行，用户直接指出"主题和背景重复了"——同一个
+    //    状态开两个入口，必然出现"下拉写深色、药丸写浅色"这种读不懂的画面。别再拆回去。
+    //  · 内部存储仍是正交的：settings.theme() 只存 LIGHT/DARK/SYSTEM，theme.json 的 background
+    //    另存 WALLPAPER 开关。下拉第 4 项只写 themeStore.background、不动 settings.theme()，
+    //    所以选壁纸时深浅档不丢，取消壁纸能原样退回去。
+    //  · 两个调色面板内联展开（不弹窗），见 ColorPickerPanel 的类注释。
+
+    /** 主题下拉里「自定义壁纸」那一项的索引（前三项对应 settings.theme() 的三态）。 */
+    private static final int THEME_ITEM_WALLPAPER = 3;
+
+    /** 当前实际生效的背景档位（壁纸没图时按深浅回落，下拉不会"选着壁纸却没有壁纸"）。 */
+    private ThemeStore.BackgroundMode activeBackgroundMode() {
+        if (themeStore.background() == ThemeStore.BackgroundMode.WALLPAPER
+                && themeStore.wallpaperUsable()) {
+            return ThemeStore.BackgroundMode.WALLPAPER;
+        }
+        return themeDark ? ThemeStore.BackgroundMode.DARK : ThemeStore.BackgroundMode.LIGHT;
+    }
+
+    /** 主题下拉该选中第几项：壁纸优先，否则看 settings.theme()。 */
+    private int themeSelectionIndex() {
+        if (activeBackgroundMode() == ThemeStore.BackgroundMode.WALLPAPER) {
+            return THEME_ITEM_WALLPAPER;
+        }
+        return switch (settings.theme()) {
+            case LIGHT -> 1;
+            case DARK -> 2;
+            case SYSTEM -> 0;
+        };
+    }
+
+    /**
+     * 主题行下面那条「当前壁纸 / 更换图片 / 清除壁纸」。
+     *
+     * <p>挂在下拉正下方、只有选到第 4 项才显示：这样"主题"一个控件就管完了深浅和壁纸，
+     * 不再有第二处入口跟它打架。收起时 {@code managed=false}——不占高度，也不会多吃一条
+     * 分隔线（外层用 {@code rowWithPanel} 裹成一组）。
+     */
+    private VBox buildWallpaperStripHost() {
+        wallpaperStateLabel = new Label();
+        wallpaperStateLabel.getStyleClass().add("wallpaper-name");
+        // 不省略：导入时文件名固定是 wallpaper.<ext>（图由我们自己复制并命名），本来就很短；
+        // 真变长也宁可放宽，别把名字截成「wallp…」让人以为导入坏了。
+        wallpaperStateLabel.setMinWidth(Region.USE_PREF_SIZE);
+
+        Label hint = new Label("当前壁纸");
+        hint.getStyleClass().add("setting-desc");
+        hint.setMinWidth(Region.USE_PREF_SIZE);
+
+        Button change = compactButton("更换图片");
+        change.setOnAction(e -> chooseWallpaper());
+        Button clear = compactButton("清除壁纸");
+        clear.setOnAction(e -> clearWallpaper());
+
+        Region gap = filler();
+        HBox.setHgrow(gap, Priority.ALWAYS);
+
+        HBox strip = new HBox(10, hint, wallpaperStateLabel, gap, change, clear);
+        strip.setAlignment(Pos.CENTER_LEFT);
+        strip.getStyleClass().add("wallpaper-strip");
+
+        VBox host = new VBox(strip);
+        host.setVisible(false);
+        host.setManaged(false);
+        return host;
+    }
+
+    /** 清除壁纸：只解除绑定，不动磁盘上的文件（零删除），退回按当前深浅的纯色背景。 */
+    private void clearWallpaper() {
+        themeStore = themeStore.withWallpaperPath(null);
+        themeStore = themeStore.withBackground(themeDark
+                ? ThemeStore.BackgroundMode.DARK : ThemeStore.BackgroundMode.LIGHT);
+        applyAppearance(false);
+    }
+
+    /**
+     * 主题下拉选中某一项之后干的事：前三项切深浅档，第四项切壁纸。
+     *
+     * <p>壁纸那一档**不改** {@code settings.theme()}：壁纸是正交的一层，深浅照旧管文字与按钮
+     * 配色（蒙版随深浅自动切），所以选壁纸前用户挑的深浅档要留着，取消壁纸时好退回去。
+     */
+    private void onThemeSelected(int index) {
+        if (syncingAppearance) {
+            return;
+        }
+        if (index == THEME_ITEM_WALLPAPER) {
+            themeStore = themeStore.withBackground(ThemeStore.BackgroundMode.WALLPAPER);
+            applyAppearance(false);
+            if (!themeStore.wallpaperUsable()) {
+                // 还没有图：直接把文件选择器打开，别让用户点完一片空白不知道下一步
+                chooseWallpaper();
+                if (!themeStore.wallpaperUsable()) {
+                    // 用户取消了选择：退回纯色背景，不留"选了壁纸却没有壁纸"的悬空状态
+                    themeStore = themeStore.withBackground(themeDark
+                            ? ThemeStore.BackgroundMode.DARK : ThemeStore.BackgroundMode.LIGHT);
+                    applyAppearance(false);
+                }
+            }
+            return;
+        }
+        SettingsStore.ThemeMode mode = switch (index) {
+            case 1 -> SettingsStore.ThemeMode.LIGHT;
+            case 2 -> SettingsStore.ThemeMode.DARK;
+            default -> SettingsStore.ThemeMode.SYSTEM;
+        };
+        settings = settings.withTheme(mode);
+        // 先按当前深浅估一档：目的是让运行时先知道"壁纸关了"，再切深浅，避免中间闪一帧壁纸。
+        // 「跟随系统」可能随后翻面，所以下面按真正的 themeDark 再校一次。
+        themeStore = themeStore.withBackground(themeDark
+                ? ThemeStore.BackgroundMode.DARK : ThemeStore.BackgroundMode.LIGHT);
+        applyAppearance(false);
+        applyTheme();
+        themeStore = themeStore.withBackground(themeDark
+                ? ThemeStore.BackgroundMode.DARK : ThemeStore.BackgroundMode.LIGHT);
+        commitThemeStore();
+        commitSettings();
+    }
+
+    /**
+     * 取值小胶囊：色点在前、完整取值文字紧随（如 {@code #237a44（默认）}）。
+     *
+     * <p>排布是「色点 + 取值 → 选择颜色 → 恢复默认」：色块和它对应的值挨在一起，两个动作
+     * 再往右，一眼能分清"哪个是当前值、哪个是按钮"。
+     *
+     * <p>宽度按内容走、{@code minWidth=USE_PREF_SIZE} 不参与收缩——这是修「取值被截成
+     * #2f9e… / 断成两行」的关键；同理两颗按钮也用 USE_PREF_SIZE。三样加起来约 310px，
+     * 窗口再窄宁可让左边的说明文字折行，也不许压这里。别再给它们加 maxWidth。
+     */
+    private Label valueChip(boolean forText) {
+        Region dot = new Region();
+        dot.getStyleClass().add("color-chip-dot");
+        Label chip = new Label();
+        chip.setGraphic(dot);
+        chip.setContentDisplay(ContentDisplay.LEFT);
+        chip.setGraphicTextGap(6);
+        chip.getStyleClass().add("color-value-chip");
+        chip.setMinWidth(Region.USE_PREF_SIZE);
+        if (forText) {
+            textColorValueLabel = chip;
+            textColorSwatch = dot;
+        } else {
+            accentColorValueLabel = chip;
+            accentColorSwatch = dot;
+        }
+        return chip;
+    }
+
+    /** 文字颜色行右侧：色点 + 取值 → 「选择颜色」→「恢复默认」。 */
+    private HBox textColorControl() {
+        Button pick = compactButton("选择颜色");
+        pick.setOnAction(e -> togglePicker(true));
+        Button reset = compactButton("恢复默认");
+        reset.setOnAction(e -> {
+            themeStore = themeStore.withText(null);
+            if (textPicker != null) {
+                textPicker.setColor(defaultTextHex());
+            }
+            applyAppearance(false);
+        });
+        HBox box = new HBox(10, valueChip(true), pick, reset);
+        box.setAlignment(Pos.CENTER_RIGHT);
+        return box;
+    }
+
+    /** 主题色行右侧：同上。 */
+    private HBox accentColorControl() {
+        Button pick = compactButton("选择颜色");
+        pick.setOnAction(e -> togglePicker(false));
+        Button reset = compactButton("恢复默认");
+        reset.setOnAction(e -> {
+            themeStore = themeStore.withAccent(null);
+            if (accentPicker != null) {
+                accentPicker.setColor(ThemeStore.defaultAccentHex());
+            }
+            applyAppearance(false);
+        });
+        HBox box = new HBox(10, valueChip(false), pick, reset);
+        box.setAlignment(Pos.CENTER_RIGHT);
+        return box;
+    }
+
+    /**
+     * 设置行里的紧凑按钮：{@code minWidth=USE_PREF_SIZE} 钉死，窗口再窄也不许把按钮
+     * 文字压成省略号（那正是这次要修的毛病），宁可让左侧说明列多折两行。
+     */
+    private static Button compactButton(String text) {
+        Button button = new Button(text);
+        button.getStyleClass().addAll("btn-ghost", "btn-compact");
+        button.setMinWidth(Region.USE_PREF_SIZE);
+        return button;
+    }
+
+    /** 调色面板的宿主容器：默认收起且 unmanaged（不占高度，不撑大设置卡）。 */
+    private static VBox pickerHost() {
+        VBox host = new VBox();
+        host.setVisible(false);
+        host.setManaged(false);
+        // 展开时给出上下留白：面板别贴着上一行，也别贴着下面的分隔线
+        host.setPadding(new Insets(2, 0, 14, 0));
+        return host;
+    }
+
+    /**
+     * 一行设置 + 它下面可展开的调色面板，打包成一组。
+     *
+     * <p>为什么不把面板当成独立一行塞给 buildCard：buildCard 会给**每个**子节点后面补一条
+     * 分隔线，面板收起（unmanaged）时那条线依然会画出来，两个设置行之间就冒出「双分隔线」。
+     * 裹成一组后，收起状态整组只有一行高、分隔线也只一条。
+     */
+    private static VBox rowWithPanel(HBox row, VBox host) {
+        return new VBox(0, row, host);
+    }
+
+    /** 展开 / 收起调色面板（{@code text = true} 表示文字色那个）。 */
+    private void togglePicker(boolean text) {
+        VBox host = text ? textPickerHost : accentPickerHost;
+        if (host == null) {
+            return;
+        }
+        boolean show = !host.isVisible();
+        if (show) {
+            ensurePicker(text);
+        }
+        host.setVisible(show);
+        host.setManaged(show);
+    }
+
+    /** 懒建调色面板：设置页首次打开不建 Canvas，省一帧。 */
+    private void ensurePicker(boolean text) {
+        if (text) {
+            if (textPicker != null) {
+                return;
+            }
+            textPicker = new ColorPickerPanel("文字颜色",
+                    "拖动色环或输入 HEX，界面会立刻跟着变。标题、正文、次要提示各取一级明度。",
+                    themeStore.customText() ? themeStore.textColor() : defaultTextHex(),
+                    hex -> {
+                        themeStore = themeStore.withText(hex);
+                        applyAppearance(true);
+                    },
+                    () -> {
+                        themeStore = themeStore.withText(null);
+                        textPicker.setColor(defaultTextHex());
+                        applyAppearance(false);
+                    },
+                    () -> {
+                        textPickerHost.setVisible(false);
+                        textPickerHost.setManaged(false);
+                    });
+            textPickerHost.getChildren().add(textPicker);
+            return;
+        }
+        if (accentPicker != null) {
+            return;
+        }
+        accentPicker = new ColorPickerPanel("主题色",
+                "选一个颜色，界面上所有绿色都会换成它；深浅主题各取对应的明暗档。",
+                themeStore.effectiveAccent(),
+                hex -> {
+                    themeStore = themeStore.withAccent(hex);
+                    applyAppearance(true);
+                },
+                () -> {
+                    themeStore = themeStore.withAccent(null);
+                    accentPicker.setColor(ThemeStore.defaultAccentHex());
+                    applyAppearance(false);
+                },
+                () -> {
+                    accentPickerHost.setVisible(false);
+                    accentPickerHost.setManaged(false);
+                });
+        accentPickerHost.getChildren().add(accentPicker);
+    }
+
+    /** 当前主题下的"默认文字色"，用作调色面板打开时的起点（不做自定义时它就是界面上的颜色）。 */
+    private String defaultTextHex() {
+        return themeDark ? "#e9eef5" : "#101828";
+    }
+
+    /**
+     * 选壁纸：只收横屏，复制进 {@code ~/.gbl/wallpapers/}（微信/浏览器的临时路径过几天就没了）。
+     *
+     * <p>图偏小不拦，只提示"放大后可能不清晰"——那是用户的审美判断，不是我们拦的理由。
+     */
+    private void chooseWallpaper() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("选择壁纸（只支持横屏图片）");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("图片",
+                        "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp"),
+                new FileChooser.ExtensionFilter("所有文件", "*.*"));
+        java.io.File file = chooser.showOpenDialog(stage);
+        if (file == null) {
+            return;
+        }
+        Image probe;
+        try {
+            probe = new Image(file.toURI().toString());
+        } catch (RuntimeException ex) {
+            probe = null;
+        }
+        if (probe == null || probe.isError() || probe.getWidth() <= 0 || probe.getHeight() <= 0) {
+            toast("这张图片读不了，换一张试试");
+            return;
+        }
+        double iw = probe.getWidth();
+        double ih = probe.getHeight();
+        if (!ThemeStore.isLandscapeForTests(iw, ih)) {
+            String shape = iw == ih ? "正方形" : "竖屏";
+            toast(String.format("只支持横屏图片（宽 > 高）。这张是 %d×%d 的%s，"
+                    + "铺满窗口会把主体裁掉，换一张横着的吧。",
+                    (int) iw, (int) ih, shape));
+            return;
+        }
+        try {
+            themeStore = themeStore.importWallpaper(file.toPath());
+        } catch (Exception ex) {
+            toast("壁纸保存失败：" + ex.getMessage());
+            return;
+        }
+        applyAppearance(false);
+        if (iw < 1280 || ih < 720) {
+            toast("壁纸已应用。这张图偏小，放大后可能不清晰。");
+        } else {
+            toast("壁纸已应用");
+        }
+    }
+
+    /** 外观改动落到运行时（{@code live = true} 走节流，用于拖色环的实时预览）。 */
+    private void applyAppearance(boolean live) {
+        if (themeRuntime != null) {
+            themeRuntime.setStore(themeStore);
+            if (live) {
+                themeRuntime.reapplyLive();
+            } else {
+                themeRuntime.reapply();
+            }
+        }
+        refreshAppearanceUi();
+        commitThemeStore();
+    }
+
+    /** theme.json 落盘（300ms 防抖，拖动色环不该每帧写盘）。 */
+    private void commitThemeStore() {
+        if (themeSaveDebounce == null) {
+            themeSaveDebounce = new PauseTransition(Duration.millis(300));
+            themeSaveDebounce.setOnFinished(e -> {
+                if (!themeStore.save()) {
+                    toast("外观设置保存失败，这次改动可能留不下来");
+                }
+                refreshAppearanceUi();
+            });
+        }
+        themeSaveDebounce.playFromStart();
+    }
+
+    /** 把配置回读到设置页控件上（主题下拉选中项、壁纸条、色点与取值）。 */
+    private void refreshAppearanceUi() {
+        if (themeBox == null) {
+            return;
+        }
+        syncingAppearance = true;
+        try {
+            // 回读也是走同一个 onAction：syncingAppearance 那面旗子负责别让它反过来再改一次配置
+            themeBox.getSelectionModel().select(themeSelectionIndex());
+            boolean wallpaperOn = activeBackgroundMode() == ThemeStore.BackgroundMode.WALLPAPER;
+            if (wallpaperStripHost != null) {
+                wallpaperStripHost.setVisible(wallpaperOn);
+                wallpaperStripHost.setManaged(wallpaperOn);
+            }
+            if (wallpaperStateLabel != null) {
+                wallpaperStateLabel.setText(themeStore.wallpaperUsable()
+                        ? fileNameOf(themeStore.wallpaperPath())
+                        : (themeStore.wallpaperPath() == null ? "未选择图片" : "图片已丢失"));
+            }
+            if (textColorSwatch != null) {
+                String hex = themeStore.customText() ? themeStore.textColor() : defaultTextHex();
+                textColorSwatch.setStyle("-fx-background-color: " + hex + ";");
+                textColorValueLabel.setText(themeStore.customText() ? hex : hex + "（默认）");
+            }
+            if (accentColorSwatch != null) {
+                String hex = themeStore.effectiveAccent();
+                accentColorSwatch.setStyle("-fx-background-color: " + hex + ";");
+                accentColorValueLabel.setText(themeStore.customAccent() ? hex : hex + "（默认）");
+            }
+        } finally {
+            syncingAppearance = false;
+        }
+    }
+
+    private static String fileNameOf(String path) {
+        if (path == null) {
+            return "";
+        }
+        try {
+            Path name = Paths.get(path).getFileName();
+            return name == null ? path : name.toString();
+        } catch (RuntimeException ex) {
+            return path;
+        }
+    }
+
+    /** 涟漪高光取色（Scene 还没建好时按出厂口径兜底）。 */
+    private Color rippleColor() {
+        if (themeRuntime != null) {
+            return themeRuntime.rippleColor();
+        }
+        boolean darkNow = shell != null && shell.getStyleClass().contains("dark");
+        return darkNow ? Color.web("#ffffff", 0.30) : Color.web("#2f9e58", 0.20);
+    }
+
+    /** 成功提示的内联字色：跟着主题色走（内联样式绕过 CSS，只能在这里接）。 */
+    private String successTextStyle() {
+        String green = themeRuntime == null ? "#19b36b" : themeRuntime.accentVariant("#19b36b");
+        return "-fx-text-fill:" + green + ";";
+    }
+
     private Node themeSelect() {
         ComboBox<String> box = new ComboBox<>();
-        box.getItems().addAll("跟随系统", "浅色", "深色");
-        box.getSelectionModel().select(
-                switch (settings.theme()) {
-                    case LIGHT -> 1;
-                    case DARK -> 2;
-                    case SYSTEM -> 0;
-                });
-        box.getStyleClass().add("setting-select");
-        box.setPrefWidth(150);
-        box.setOnAction(e -> {
-            SettingsStore.ThemeMode mode = switch (box.getSelectionModel().getSelectedIndex()) {
-                case 1 -> SettingsStore.ThemeMode.LIGHT;
-                case 2 -> SettingsStore.ThemeMode.DARK;
-                default -> SettingsStore.ThemeMode.SYSTEM;
-            };
-            settings = settings.withTheme(mode);
-            applyTheme();
-            commitSettings();
-        });
+        // 第 4 项「自定义壁纸」= 把壁纸当成第四种背景：选它会在下面展开壁纸条，
+        // 深浅档不被覆盖（见 onThemeSelected 的注释）。
+        box.getItems().addAll("跟随系统", "浅色", "深色", "自定义壁纸");
+        box.getSelectionModel().select(themeSelectionIndex());
+        // theme-select 是给这一颗下拉单独抬宽的类：.setting-select 的 -fx-min-width 是 150，
+        // CSS 会盖掉 setMinWidth，不加这个类窄窗口下第四项就被截成「自定义…」了
+        box.getStyleClass().addAll("setting-select", "theme-select");
+        box.setPrefWidth(170);
+        box.setOnAction(e -> onThemeSelected(box.getSelectionModel().getSelectedIndex()));
         // 弹层是独立 scene，shell 上的 .dark 传不进去，得自己给弹层补一份。
         // 除了给根节点补类，还要挂 popup-dark.css：根节点自己的类名（popup）不会
         // 进入子节点的匹配链，只补类的话 list-view / list-cell 仍然是 modena 的白底。
@@ -13750,12 +14208,15 @@ public final class ShellView implements UpdateController.UpdateUi {
      * 开关是字段而不是局部变量：监听器里只改 settings，这里赋值不会回环。
      */
     private void refreshSettingsUi() {
-        themeBox.getSelectionModel().select(
-                switch (settings.theme()) {
-                    case LIGHT -> 1;
-                    case DARK -> 2;
-                    case SYSTEM -> 0;
-                });
+        // 「主题」下拉现在有第四项「自定义壁纸」，回读按实际生效档位算，别只照 settings.theme()
+        if (themeBox != null) {
+            syncingAppearance = true;
+            try {
+                themeBox.getSelectionModel().select(themeSelectionIndex());
+            } finally {
+                syncingAppearance = false;
+            }
+        }
         // 同 motionToggle()：开关是「动效开」，数据是「减少动效」，回读也要取反
         motionToggle.setSelected(!settings.reduceMotion());
         // 按钮特效：开关与数据同义（开 = 有特效），直接回读，不用取反
@@ -13804,6 +14265,8 @@ public final class ShellView implements UpdateController.UpdateUi {
         if (downloadSourceSelect != null) {
             downloadSourceSelect.getSelectionModel().select(settings.downloadSource().ordinal());
         }
+        // 1.3.3：外观三块（背景药丸 / 两个色块 / 壁纸文件名）一并回读
+        refreshAppearanceUi();
     }
 
     /**
@@ -13855,12 +14318,17 @@ public final class ShellView implements UpdateController.UpdateUi {
         }
         button.setText(RESET_LABEL);
         settings = SettingsStore.defaults();
+        // 1.3.3：外观也回出厂（浅色背景 + 出厂绿 + 默认文字色）。壁纸文件留在磁盘上不删，
+        // 只是不再引用——零删除，用户想再开壁纸不必重新导入。
+        themeStore = themeStore.resetAppearance();
         // 0.9.6 r3：恢复默认时把真实系统启动项里的 GBL 值一并清掉，
         // 否则 config.json 回到出厂值但注册表仍留着开机自启，用户会遇到「关了却还自启」。
         // 放在 refreshSettingsUi() 之前：后者以 isEnabled() 回读真实状态，此时已是 false。
         BootAutostart.setEnabled(false);
         refreshSettingsUi();
         applyTheme();
+        // 运行时也要跟着复位：摘掉壁纸层/蒙版，并把运行时样式表撤干净
+        applyAppearance(false);
         commitSettings();
     }
 
@@ -13905,18 +14373,24 @@ public final class ShellView implements UpdateController.UpdateUi {
             dark = mode == SettingsStore.ThemeMode.DARK
                     || (mode == SettingsStore.ThemeMode.SYSTEM && SystemTheme.isDark());
         }
-        if (dark == themeDark) {
-            return;
-        }
         themeDark = dark;
+        // 1.3.3：不再「深浅没变就直接 return」——外观运行时也要跟着刷新（壁纸层可见性、
+        // 主题色对 Java 侧取色的影响都在里面）。两处都是幂等的，重复调没有副作用。
         if (dark) {
-            shell.getStyleClass().add("dark");
+            if (!shell.getStyleClass().contains("dark")) {
+                shell.getStyleClass().add("dark");
+            }
         } else {
             shell.getStyleClass().remove("dark");
             // 0.9.1：浅色时把已挂到弹层 scene 上的深色样式表也摘掉。
             // 弹层是独立 Window，不受 shell 的 .dark 类管辖，不清理的话深→浅→深来回切会残留深底。
             stripPopupDark();
         }
+        if (themeRuntime != null) {
+            themeRuntime.refresh(dark);
+        }
+        // 1.3.3：深浅一变，主题下拉的选中项、壁纸条、"默认文字色"的取值都要跟着刷新
+        refreshAppearanceUi();
     }
 
     /**
