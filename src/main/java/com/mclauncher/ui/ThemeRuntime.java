@@ -1,5 +1,9 @@
 package com.mclauncher.ui;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,9 +13,11 @@ import com.mclauncher.ThemeCss;
 import com.mclauncher.ThemeStore;
 
 import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelReader;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -63,8 +69,17 @@ public final class ThemeRuntime {
     private Image wallpaperImage;
     /** 当前已载入的壁纸路径，避免重复解码。 */
     private String wallpaperSource;
+    /** 当前已载入那张图的**文件指纹**（size + lastModified）。1.3.4 起判「同一张」不再只看路径。 */
+    private String wallpaperSignature;
     /** 载入失败的路径：同一个文件失败一次就不再重试，免得每帧都去读一张坏图。 */
     private String wallpaperFailedSource;
+    /** 失败那次的文件指纹（同一路径换了内容要允许重试）。 */
+    private String wallpaperFailedSignature;
+    /** 正在解码的路径 / 指纹，避免同一次刷新重复起线程。 */
+    private String wallpaperLoadingSource;
+    private String wallpaperLoadingSignature;
+    /** 解码序号：期间又换了图就丢掉旧结果，绝不出现「后选的图被先选的覆盖」。 */
+    private long wallpaperLoadToken;
 
     private boolean attached;
     private boolean dark;
@@ -170,56 +185,100 @@ public final class ThemeRuntime {
 
     // ------------------------------------------------------------------ 壁纸
 
+    /**
+     * 把 {@link #store} 里的壁纸选择同步到界面上。
+     *
+     * <p><b>1.3.4 修「换了提示说换了，但没换」：</b>1.3.3 只用
+     * {@code path.equals(wallpaperSource)} 判「同一张」就直接 return，跳过了重新解码；
+     * 而那时壁纸文件是固定名覆盖写，路径从头到尾不变，于是画面永远停在第第一张。
+     *
+     * <p>现在两重保险：
+     * <ol>
+     *   <li>{@link ThemeStore#importWallpaper} 每次换图都给出**新路径**（文件名带内容指纹）；</li>
+     *   <li>这里再比一次文件的 {@code size + lastModified} 指纹 —— 就算路径没变
+     *       （老版本留下的固定名文件被外部改写了），只要内容变了也照样重新解码。</li>
+     * </ol>
+     */
     private void syncWallpaper() {
         if (!store.wallpaperUsable()) {
             deactivateWallpaper();
             return;
         }
         String path = store.wallpaperPath();
-        if (wallpaperImage != null && !wallpaperImage.isError() && path.equals(wallpaperSource)) {
+        String signature = wallpaperFileFingerprintForTests(Paths.get(path));
+        // 指纹读不到（极端情况：文件被独占）时退回只看路径，保持 1.3.3 的行为，绝不疯狂重试
+        boolean sameLoaded = path.equals(wallpaperSource)
+                && (signature == null || signature.equals(wallpaperSignature));
+        if (wallpaperImage != null && !wallpaperImage.isError() && sameLoaded) {
             activateWallpaper();
             return;
         }
-        if (path.equals(wallpaperFailedSource)) {
+        boolean sameFailed = path.equals(wallpaperFailedSource)
+                && (signature == null || signature.equals(wallpaperFailedSignature));
+        if (sameFailed) {
             deactivateWallpaper();
             return;
         }
-        loadWallpaperAsync(path);
+        boolean sameLoading = path.equals(wallpaperLoadingSource)
+                && (signature == null || signature.equals(wallpaperLoadingSignature));
+        if (sameLoading) {
+            return;   // 这张已经在解码了，等它回来
+        }
+        loadWallpaperAsync(path, signature);
     }
 
-    /** 后台解码（大图不阻塞 FX 线程）；成功才切换成壁纸模式，失败安静退回纯色背景。 */
-    private void loadWallpaperAsync(String path) {
-        Image image;
-        try {
-            image = new Image(Paths.get(path).toUri().toString(), true);
-        } catch (RuntimeException ex) {
-            wallpaperFailedSource = path;
-            deactivateWallpaper();
+    /**
+     * 后台解码（大图不阻塞 FX 线程）；成功才切换成壁纸模式，失败安静退回纯色背景。
+     *
+     * <p>1.3.4 起改为「从 {@link InputStream} 解码」而不是 {@code new Image(url)}：
+     * 同一个 URI 在 JavaFX 里有被复用的可能，走输入流是真正重新读字节，换图必生效。
+     */
+    private void loadWallpaperAsync(String path, String signature) {
+        final long token = ++wallpaperLoadToken;
+        wallpaperLoadingSource = path;
+        wallpaperLoadingSignature = signature;
+        Thread worker = new Thread(() -> {
+            Image loaded = null;
+            String failure = null;
+            try (InputStream in = Files.newInputStream(Paths.get(path))) {
+                loaded = new Image(in, 0, 0, true, true);
+                if (loaded.isError() || loaded.getWidth() <= 0 || loaded.getHeight() <= 0) {
+                    failure = "解码失败";
+                }
+            } catch (IOException | RuntimeException ex) {
+                failure = String.valueOf(ex);
+            }
+            final Image image = loaded;
+            final String error = failure;
+            Platform.runLater(() -> applyLoadedWallpaper(token, path, signature, image, error));
+        }, "gbl-wallpaper-load");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    /** 解码结果回主线程落地；期间又换了图（token 变了）就整份丢掉。 */
+    private void applyLoadedWallpaper(long token, String path, String signature,
+                                      Image loaded, String failure) {
+        if (token != wallpaperLoadToken) {
             return;
         }
-        image.progressProperty().addListener((obs, ov, nv) -> {
-            if (nv == null || nv.doubleValue() < 1.0) {
-                return;
-            }
-            if (image.isError() || image.getWidth() <= 0 || image.getHeight() <= 0) {
-                wallpaperFailedSource = path;
-                deactivateWallpaper();
-                System.err.println("[theme] 壁纸解码失败，退回纯色背景: " + path);
-                return;
-            }
-            wallpaperImage = image;
-            wallpaperSource = path;
-            wallpaperFailedSource = null;
-            wallpaperView.setImage(image);
-            layoutWallpaper();
-            activateWallpaper();
-        });
-        image.errorProperty().addListener((obs, ov, nv) -> {
-            if (Boolean.TRUE.equals(nv)) {
-                wallpaperFailedSource = path;
-                deactivateWallpaper();
-            }
-        });
+        wallpaperLoadingSource = null;
+        wallpaperLoadingSignature = null;
+        if (loaded == null || failure != null) {
+            wallpaperFailedSource = path;
+            wallpaperFailedSignature = signature;
+            deactivateWallpaper();
+            System.err.println("[theme] 壁纸解码失败，退回纯色背景: " + path + " (" + failure + ")");
+            return;
+        }
+        wallpaperImage = loaded;
+        wallpaperSource = path;
+        wallpaperSignature = signature;
+        wallpaperFailedSource = null;
+        wallpaperFailedSignature = null;
+        wallpaperView.setImage(loaded);
+        layoutWallpaper();
+        activateWallpaper();
     }
 
     private void activateWallpaper() {
@@ -365,5 +424,72 @@ public final class ThemeRuntime {
     /** QA：壁纸按"盖满"算出来的显示尺寸 {@code [宽, 高]}，未加载时为 {@code [0, 0]}。 */
     public double[] wallpaperFitForTests() {
         return new double[] {wallpaperView.getFitWidth(), wallpaperView.getFitHeight()};
+    }
+
+    /**
+     * QA：壁纸文件的指纹（{@code size:lastModified}）。静态纯函数，不碰 JavaFX、只读文件属性。
+     *
+     * <p>断言点：同一个路径换掉内容后指纹必须变 —— 这是 1.3.4
+     * 「换图必须重新解码」的第二道保险。
+     *
+     * @return 指纹串；文件不存在或读不到返回 {@code null}
+     */
+    public static String wallpaperFileFingerprintForTests(Path file) {
+        if (file == null) {
+            return null;
+        }
+        try {
+            if (!Files.isRegularFile(file)) {
+                return null;
+            }
+            return Files.size(file) + ":" + Files.getLastModifiedTime(file).toMillis();
+        } catch (IOException | RuntimeException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * QA：一张图的内容签名 {@code 宽x高:哈希}（8x8 网格抽样 + FNV-1a）。
+     *
+     * <p>只读 {@link Image}，不用起窗口。断言点：换图后签名必须变，
+     * 同一张图重复加载签名必须稳定。
+     *
+     * @return 签名；图片为空 / 解码失败时返回 {@code null}
+     */
+    public static String imageSignatureForTests(Image image) {
+        if (image == null || image.isError()) {
+            return null;
+        }
+        int width = (int) Math.round(image.getWidth());
+        int height = (int) Math.round(image.getHeight());
+        PixelReader reader = image.getPixelReader();
+        if (reader == null || width <= 0 || height <= 0) {
+            return null;
+        }
+        long hash = 0xcbf29ce484222325L;   // FNV-1a 64 位
+        for (int gy = 0; gy < 8; gy++) {
+            for (int gx = 0; gx < 8; gx++) {
+                int x = Math.min(width - 1, (int) ((gx + 0.5) * width / 8.0));
+                int y = Math.min(height - 1, (int) ((gy + 0.5) * height / 8.0));
+                hash ^= reader.getArgb(x, y) & 0xffffffffL;
+                hash *= 0x100000001b3L;
+            }
+        }
+        return width + "x" + height + ":" + Long.toHexString(hash);
+    }
+
+    /** QA：当前真正挂在壁纸层上的那张图的签名；没加载时 {@code null}。 */
+    public String wallpaperImageSignatureForTests() {
+        return imageSignatureForTests(wallpaperImage);
+    }
+
+    /** QA：当前已解码进 {@link #wallpaperView} 的壁纸路径；没加载时 {@code null}。 */
+    public String wallpaperSourceForTests() {
+        return wallpaperSource;
+    }
+
+    /** QA：壁纸层当前挂的那张图（供断言像素/尺寸）；没加载时 {@code null}。 */
+    public Image wallpaperImageForTests() {
+        return wallpaperImage;
     }
 }
