@@ -9,7 +9,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-abc0384821--dot%2Fgbl-blue?style=flat-square&logo=github)](https://github.com/abc0384821-dot/gbl)
 [![Gitee](https://img.shields.io/badge/Gitee-abc0384821--dot%2Fgbl-c71d23?style=flat-square&logo=gitee)](https://gitee.com/abc0384821-dot/gbl)
 [![官网](https://img.shields.io/badge/website-gbl--website.pages.dev-2ea44f?style=flat-square)](https://gbl-website.pages.dev/)
-[![版本](https://img.shields.io/badge/version-1.3.2-orange?style=flat-square)](https://github.com/abc0384821-dot/gbl/releases)
+[![版本](https://img.shields.io/badge/version-1.3.3-orange?style=flat-square)](https://github.com/abc0384821-dot/gbl/releases)
 [![开源协议](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 </div>
