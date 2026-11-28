@@ -17,6 +17,7 @@ import javafx.stage.Window;
 import javafx.util.Duration;
 
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.function.BooleanSupplier;
@@ -54,6 +55,12 @@ public final class GblMotion {
             GblMotion.class.getResource("/com/mclauncher/theme.css").toExternalForm();
     public static final String POPUP_DARK_CSS =
             GblMotion.class.getResource("/com/mclauncher/popup-dark.css").toExternalForm();
+
+    /**
+     * 1.3.3：主窗口那份"主题色/文字色映射"样式表。弹层是独立 Scene，不挂这份的话
+     * 下拉里的选中项仍是原来的绿底绿字。由 {@code ThemeRuntime} 在生成映射表时注册。
+     */
+    private static volatile List<String> EXTRA_POPUP_CSS = List.of();
 
     /** 正在播放的弹层入场动画：弱键，窗口关闭后自动回收。 */
     private static final Map<Window, Animation> POPUP_ANIMATIONS = new WeakHashMap<>();
@@ -199,10 +206,27 @@ public final class GblMotion {
             if (!popup.getScene().getStylesheets().contains(POPUP_THEME_CSS)) {
                 popup.getScene().getStylesheets().add(POPUP_THEME_CSS);
             }
+            // 1.3.3：主窗口那份「主题色/文字色映射」样式表，弹层也挂同一份，否则下拉里
+            // 选中项还是原来的绿底绿字。必须排在 popup-dark.css 之前——深色弹层的实底
+            // 要能盖住它，不然深色下拉会被映射表里的浅色规则改花。
+            List<String> extra = EXTRA_POPUP_CSS;
+            for (String url : extra) {
+                if (!popup.getScene().getStylesheets().contains(url)) {
+                    popup.getScene().getStylesheets().add(url);
+                }
+            }
             if (dark && !popup.getScene().getStylesheets().contains(POPUP_DARK_CSS)) {
                 popup.getScene().getStylesheets().add(POPUP_DARK_CSS);
             }
         }
+    }
+
+    /**
+     * 1.3.3：注册"额外的弹层样式表"（目前是主题色/文字色映射出来的两份）。
+     * 传空表示没有自定义，弹层退回原样式表。
+     */
+    public static void setExtraPopupStylesheets(List<String> urls) {
+        EXTRA_POPUP_CSS = urls == null ? List.of() : List.copyOf(urls);
     }
 
     /** 切回浅色时摘掉所有弹层样式表，防止深→浅→深残留。 */
@@ -213,6 +237,9 @@ public final class GblMotion {
             }
             popup.getScene().getStylesheets().remove(POPUP_DARK_CSS);
             popup.getScene().getStylesheets().remove(POPUP_THEME_CSS);
+            for (String url : EXTRA_POPUP_CSS) {
+                popup.getScene().getStylesheets().remove(url);
+            }
             resetPopup(popup);
         }
     }
